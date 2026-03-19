@@ -2,85 +2,95 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 from scipy import stats
 import statsmodels.api as sm
 
-st.set_page_config(page_title="Air Quality Policy Dashboard", layout="wide")
-
-st.title("🌫️ Air Quality Policy Impact Dashboard")
+st.set_page_config(page_title="대기질 정책 분석 대시보드", layout="wide")
 
 # ---------------------------
-# 1. 데이터 로드 (실무 스타일)
+# 1. 데이터 로드
 # ---------------------------
 @st.cache_data
 def load_data():
     data = {
-        "year": [2025]*10 + [2026]*10,
-        "month": list(range(1, 11)) * 2,
-        "pm25": [42,39,45,38,35,33,30,28,31,36,
+        "연도": [2025]*10 + [2026]*10,
+        "월": list(range(1, 11)) * 2,
+        "PM25": [42,39,45,38,35,33,30,28,31,36,
                  30,28,32,27,25,23,22,21,24,26],
-        "respiratory": [310,295,320,280,260,250,240,235,245,270,
-                        240,225,250,220,205,195,190,185,200,215]
+        "호흡기질환": [310,295,320,280,260,250,240,235,245,270,
+                       240,225,250,220,205,195,190,185,200,215]
     }
     df = pd.DataFrame(data)
-    df["date"] = pd.to_datetime(df["year"].astype(str) + "-" + df["month"].astype(str))
-    df = df.sort_values("date")
-    return df
+    df["날짜"] = pd.to_datetime(df["연도"].astype(str) + "-" + df["월"].astype(str))
+    return df.sort_values("날짜")
 
 df = load_data()
 
 # ---------------------------
-# 2. KPI 계산
+# 2. 사이드바
+# ---------------------------
+st.sidebar.title("⚙️ 분석 설정")
+
+selected_year = st.sidebar.multiselect(
+    "연도 선택",
+    options=df["연도"].unique(),
+    default=df["연도"].unique()
+)
+
+lag = st.sidebar.slider("시차(Lag, 개월)", 0, 3, 1)
+
+show_regression = st.sidebar.checkbox("회귀 분석 보기", True)
+
+filtered_df = df[df["연도"].isin(selected_year)].copy()
+
+# lag 변수 생성
+filtered_df["PM25_LAG"] = filtered_df["PM25"].shift(lag)
+
+# ---------------------------
+# 3. KPI 계산
 # ---------------------------
 def calculate_kpi(df):
     result = {}
 
-    for col in ["pm25", "respiratory"]:
-        pre = df[df.year == 2025][col].mean()
-        post = df[df.year == 2026][col].mean()
+    for col in ["PM25", "호흡기질환"]:
+        pre = df[df["연도"] == 2025][col].mean()
+        post = df[df["연도"] == 2026][col].mean()
         result[col] = {
-            "pre": pre,
-            "post": post,
-            "reduction": (pre - post) / pre * 100
+            "감소율": (pre - post) / pre * 100
         }
 
-    corr = df["pm25"].corr(df["respiratory"])
+    corr = df["PM25"].corr(df["호흡기질환"])
+    return result, corr
 
-    t_pm, p_pm = stats.ttest_ind(
-        df[df.year == 2025]["pm25"],
-        df[df.year == 2026]["pm25"]
-    )
-
-    return result, corr, p_pm
-
-kpi, corr, p_pm = calculate_kpi(df)
+kpi, corr = calculate_kpi(filtered_df)
 
 # ---------------------------
-# 3. KPI UI
+# 4. 제목
 # ---------------------------
-st.subheader("📊 KPI Overview")
+st.title("🌫️ 서울시 대기질 정책 효과 분석 대시보드")
+
+# ---------------------------
+# 5. KPI
+# ---------------------------
+st.subheader("📊 핵심 지표")
 
 col1, col2, col3 = st.columns(3)
 
-col1.metric("PM2.5 감소율", f"{kpi['pm25']['reduction']:.1f}%")
-col2.metric("질환 감소율", f"{kpi['respiratory']['reduction']:.1f}%")
+col1.metric("PM2.5 감소율", f"{kpi['PM25']['감소율']:.1f}%")
+col2.metric("호흡기 질환 감소율", f"{kpi['호흡기질환']['감소율']:.1f}%")
 col3.metric("상관계수", f"{corr:.2f}")
 
-st.caption(f"PM2.5 p-value: {p_pm:.5f}")
-
 # ---------------------------
-# 4. 인터랙티브 시계열
+# 6. 시계열 (인터랙티브)
 # ---------------------------
-st.subheader("📈 Time Series Analysis")
+st.subheader("📈 시계열 분석")
 
 fig = px.line(
-    df,
-    x="date",
-    y=["pm25", "respiratory"],
-    color="year",
-    markers=True,
-    title="PM2.5 vs Respiratory Cases",
+    filtered_df,
+    x="날짜",
+    y=["PM25", "호흡기질환"],
+    color="연도",
+    markers=True
 )
 
 fig.update_layout(hovermode="x unified")
@@ -88,78 +98,79 @@ fig.update_layout(hovermode="x unified")
 st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------
-# 5. 상관관계 (클릭/hover 가능)
+# 7. 상관관계
 # ---------------------------
-st.subheader("🔗 Correlation Analysis")
+st.subheader("🔗 상관관계 분석")
 
 fig2 = px.scatter(
-    df,
-    x="pm25",
-    y="respiratory",
-    color="year",
-    trendline="ols",  # 회귀선 자동 추가
-    title="PM2.5 vs Respiratory Cases"
+    filtered_df,
+    x="PM25",
+    y="호흡기질환",
+    color="연도",
+    trendline="ols"
 )
 
 st.plotly_chart(fig2, use_container_width=True)
 
 # ---------------------------
-# 6. Lag 분석 (핵심🔥)
+# 8. Lag 분석
 # ---------------------------
-st.subheader("⏱️ Lag Analysis (시차 효과)")
+st.subheader("⏱️ 시차(Lag) 분석")
 
-lag_range = st.slider("Lag (개월)", 0, 3, 1)
+lag_corr = filtered_df[["PM25_LAG", "호흡기질환"]].corr().iloc[0,1]
 
-df["pm25_lag"] = df["pm25"].shift(lag_range)
-
-lag_corr = df[["pm25_lag", "respiratory"]].corr().iloc[0,1]
-
-st.write(f"📌 Lag {lag_range}개월 상관계수: {lag_corr:.2f}")
+st.write(f"👉 Lag {lag}개월 상관계수: {lag_corr:.2f}")
 
 fig3 = px.scatter(
-    df,
-    x="pm25_lag",
-    y="respiratory",
-    title=f"Lag {lag_range} Correlation"
+    filtered_df,
+    x="PM25_LAG",
+    y="호흡기질환",
+    title=f"Lag {lag} 분석"
 )
 
 st.plotly_chart(fig3, use_container_width=True)
 
 # ---------------------------
-# 7. 회귀 분석 (실무 포인트🔥)
+# 9. 회귀 분석
 # ---------------------------
-st.subheader("📉 Regression Analysis")
+if show_regression:
+    st.subheader("📉 회귀 분석")
 
-X = df["pm25"]
-X = sm.add_constant(X)
-y = df["respiratory"]
+    reg_df = filtered_df.dropna()
 
-model = sm.OLS(y, X).fit()
+    X = sm.add_constant(reg_df["PM25"])
+    y = reg_df["호흡기질환"]
 
-st.text(model.summary())
+    model = sm.OLS(y, X).fit()
+
+    st.text(model.summary())
 
 # ---------------------------
-# 8. 정책 효과 시뮬레이션
+# 10. 정책 시뮬레이션
 # ---------------------------
-st.subheader("🧪 Policy Simulation")
+st.subheader("🧪 정책 시뮬레이션")
 
 pm_input = st.slider("가정 PM2.5 수준", 20, 50, 30)
 
+reg_df = filtered_df.dropna()
+X = sm.add_constant(reg_df["PM25"])
+y = reg_df["호흡기질환"]
+model = sm.OLS(y, X).fit()
+
 pred = model.predict([1, pm_input])[0]
 
-st.write(f"예상 호흡기 질환 발생률: {pred:.1f}")
+st.write(f"👉 예상 호흡기 질환 발생률: {pred:.1f}")
 
 # ---------------------------
-# 9. 해석
+# 11. 인사이트
 # ---------------------------
-st.subheader("🧠 Insight")
+st.subheader("🧠 인사이트")
 
 st.markdown(f"""
-- 정책 이후 PM2.5는 **{kpi['pm25']['reduction']:.1f}% 감소**
-- 질환 발생률은 **{kpi['respiratory']['reduction']:.1f}% 감소**
-- 상관계수 **{corr:.2f} → 매우 강한 관계**
-- Lag 분석을 통해 시차 효과 확인 가능
-- 회귀 모델 기반 정책 효과 시뮬레이션 가능
+- PM2.5 감소 → 질환 감소 확인
+- 상관계수 **{corr:.2f}** → 매우 강한 관계
+- 시차 분석으로 정책 효과의 시간 지연 확인 가능
+- 회귀 기반으로 정책 효과 예측 가능
 
-👉 **환경 정책 → 건강 개선으로 이어지는 데이터 기반 근거 확보**
+👉 **환경 정책이 실제 건강 개선으로 이어짐**
 """)
