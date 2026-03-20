@@ -697,220 +697,647 @@ def render_urgency_cards(result_df):
         """, unsafe_allow_html=True)
 
 # ────────────────────────────────────────────────────────────────────────────────
-# 인체 해부도 SVG
+# 인체 해부도 SVG — 귀엽고 둥근 디자인 + 한국어 라벨 + 장기 상세 정보
 # ────────────────────────────────────────────────────────────────────────────────
+
+# 장기별 기능 및 병리 설명
+ORGAN_INFO = {
+    "brain": {
+        "emoji": "🧠", "name": "뇌",
+        "function": "인체의 최고 사령부. 사고·감각·운동·기억·언어를 총괄하며 자율신경계를 통해 전신 기능을 조절합니다.",
+        "pathology": "뇌졸중(뇌경색·뇌출혈), 편두통, 알츠하이머, 뇌전증, 뇌수막염 등이 발생할 수 있습니다.",
+    },
+    "eyes": {
+        "emoji": "👁️", "name": "눈",
+        "function": "빛을 수용해 시각 정보를 뇌로 전달하는 감각기관. 각막·수정체·망막이 협력해 초점을 맺습니다.",
+        "pathology": "결막염, 녹내장, 백내장, 황반변성, 당뇨망막병증 등에 취약합니다.",
+    },
+    "ears": {
+        "emoji": "👂", "name": "귀",
+        "function": "소리를 감지하고 평형 감각을 유지합니다. 외이·중이·내이의 3단계 구조로 이루어져 있습니다.",
+        "pathology": "중이염, 이명, 메니에르병(어지럼증), 이석증(체위성 현기증) 등이 흔합니다.",
+    },
+    "nose": {
+        "emoji": "👃", "name": "코/부비동",
+        "function": "공기를 여과·가습·가온하고 후각을 담당합니다. 부비동은 공기 통로와 연결된 빈 공간입니다.",
+        "pathology": "알레르기 비염, 부비동염(축농증), 비용종, 후각 장애 등이 발생합니다.",
+    },
+    "throat": {
+        "emoji": "🗣️", "name": "인후/편도",
+        "function": "음식물과 공기의 교차로이며 발성에 관여합니다. 편도는 면역 방어 1차 관문 역할을 합니다.",
+        "pathology": "편도염, 인두염, 후두염, 연하곤란, 성대결절 등이 발생할 수 있습니다.",
+    },
+    "esophagus": {
+        "emoji": "🔴", "name": "식도",
+        "function": "입에서 위까지 음식물을 운반하는 근육성 관(길이 약 25cm). 연동운동으로 내용물을 이동시킵니다.",
+        "pathology": "위식도역류질환(GERD), 식도염, 식도협착, 바렛식도, 식도암 등이 발생합니다.",
+    },
+    "thyroid": {
+        "emoji": "🦋", "name": "갑상선",
+        "function": "나비 모양의 내분비샘. 갑상선 호르몬(T3·T4)을 분비해 대사율·체온·심박수를 조절합니다.",
+        "pathology": "갑상선 기능 저하증(피로·체중증가), 갑상선 기능 항진증(빠른 심박·체중감소), 갑상선암이 주요 질환입니다.",
+    },
+    "lungs": {
+        "emoji": "🫁", "name": "폐",
+        "function": "산소를 흡수하고 이산화탄소를 배출하는 호흡기관. 약 3억 개의 폐포로 구성됩니다.",
+        "pathology": "천식, 폐렴, 결핵, 만성폐쇄성폐질환(COPD), 폐암, 기관지염이 주요 질환입니다.",
+    },
+    "heart": {
+        "emoji": "❤️", "name": "심장",
+        "function": "하루 약 10만 번 박동하며 전신에 혈액을 공급하는 펌프. 4개의 방으로 이루어져 있습니다.",
+        "pathology": "심근경색(심장마비), 협심증, 심부전, 부정맥, 심장판막질환이 대표적입니다.",
+    },
+    "liver": {
+        "emoji": "🟤", "name": "간",
+        "function": "500가지 이상의 기능을 담당하는 최대 내장기관. 해독·담즙생성·단백질 합성·혈당 조절을 수행합니다.",
+        "pathology": "간염(A/B/C형), 지방간, 간경변증, 간암, 알코올성 간질환이 흔합니다.",
+    },
+    "gallbladder": {
+        "emoji": "🟡", "name": "담낭",
+        "function": "간에서 생성된 담즙을 저장·농축했다가 지방 소화 시 십이지장으로 분비합니다.",
+        "pathology": "담석증, 담낭염, 담낭 폴립, 담낭암이 주요 질환입니다.",
+    },
+    "stomach": {
+        "emoji": "🫙", "name": "위",
+        "function": "강력한 산(pH 1~3)과 효소로 음식물을 분해합니다. 음식물을 4~6시간 저장·혼합합니다.",
+        "pathology": "위염, 소화성 궤양, 위식도역류, 헬리코박터 감염, 위암이 발생할 수 있습니다.",
+    },
+    "spleen": {
+        "emoji": "🟣", "name": "비장",
+        "function": "오래된 적혈구를 파괴하고 면역세포를 생산·저장합니다. 혈액 저장소 역할도 합니다.",
+        "pathology": "비장 비대(비종), 말라리아·뎅기열에 의한 파열, 혈액 질환에서 이차적으로 영향받습니다.",
+    },
+    "pancreas": {
+        "emoji": "🟠", "name": "췌장",
+        "function": "인슐린·글루카곤을 분비해 혈당을 조절(내분비)하고, 소화효소를 십이지장으로 분비(외분비)합니다.",
+        "pathology": "당뇨병(1·2형), 급성/만성 췌장염, 췌장암이 대표적 질환입니다.",
+    },
+    "kidneys": {
+        "emoji": "🫘", "name": "신장",
+        "function": "하루 약 180L의 혈액을 여과해 소변을 생성합니다. 혈압·전해질·산-염기 균형을 조절합니다.",
+        "pathology": "신우신염(요로감염 합병), 신장결석, 만성신장병, 신부전이 주요 질환입니다.",
+    },
+    "intestines": {
+        "emoji": "🌀", "name": "소장·대장",
+        "function": "소장(6~7m)에서 영양소를 흡수하고, 대장(1.5m)에서 수분을 흡수·변을 형성합니다.",
+        "pathology": "장염, 크론병, 과민성대장증후군(IBS), 대장암, 치질, 장 폐색이 발생합니다.",
+    },
+    "bladder": {
+        "emoji": "💧", "name": "방광",
+        "function": "신장에서 생성된 소변을 저장(400~600mL)했다가 배뇨 시 요도를 통해 배출합니다.",
+        "pathology": "방광염(요로감염), 과민성 방광, 방광결석, 방광암이 주요 질환입니다.",
+    },
+    "joints": {
+        "emoji": "🦴", "name": "관절",
+        "function": "두 뼈를 연결해 움직임을 가능하게 합니다. 연골·활액막·인대·힘줄로 구성됩니다.",
+        "pathology": "골관절염(퇴행성), 류마티스 관절염, 통풍, 강직성 척추염이 흔한 관절 질환입니다.",
+    },
+    "blood": {
+        "emoji": "🩸", "name": "혈액/혈관",
+        "function": "적혈구(산소운반)·백혈구(면역)·혈소판(지혈)으로 구성됩니다. 혈관은 전신에 약 96,000km 뻗어 있습니다.",
+        "pathology": "빈혈, 고혈압, 동맥경화, 정맥류, 혈전증, 백혈병이 발생할 수 있습니다.",
+    },
+    "lymph": {
+        "emoji": "🔵", "name": "림프계",
+        "function": "조직액을 수집해 혈액으로 돌려보내고, 림프절에서 병원체를 걸러내는 면역 네트워크입니다.",
+        "pathology": "림프절 종창(감염·암), 림프부종, 림프종(혹킨·비호킨)이 주요 질환입니다.",
+    },
+    "skin": {
+        "emoji": "🧴", "name": "피부",
+        "function": "인체 최대 기관(체표면적 약 1.7㎡). 외부 자극 차단·체온 조절·감각수용·비타민D 합성을 담당합니다.",
+        "pathology": "아토피·건선·여드름·두드러기·대상포진·피부암이 대표적입니다.",
+    },
+    "immune": {
+        "emoji": "🛡️", "name": "면역계",
+        "function": "병원체·이물질로부터 신체를 방어합니다. 선천면역(신속·비특이적)과 후천면역(느린·특이적)으로 나뉩니다.",
+        "pathology": "자가면역질환(루푸스·류마티스), 면역결핍(HIV/AIDS), 알레르기, 과민반응이 발생합니다.",
+    },
+}
+
 def render_body_svg(part_intensity, part_diseases):
     def intensity_color(score):
-        if score == 0:
-            return "#e2e8f0"
-        elif score < 0.25:
-            return "#fef9c3"
-        elif score < 0.5:
-            return "#fed7aa"
-        elif score < 0.75:
-            return "#fca5a5"
-        else:
-            return "#ef4444"
+        if score == 0:    return "#dbeafe"   # 연파랑(비연관)
+        elif score < 0.25: return "#bbf7d0"  # 연초록
+        elif score < 0.5:  return "#fde68a"  # 노랑
+        elif score < 0.75: return "#fdba74"  # 주황
+        else:              return "#fca5a5"  # 연빨강
 
-    part_data_json = {}
-    for part, diseases in part_diseases.items():
-        diseases_str = ", ".join([f"{d['kr']}({d['prob']}%)" for d in diseases[:3]])
-        part_data_json[part] = diseases_str
-
-    colors = {
-        "brain": intensity_color(part_intensity.get("brain", 0)),
-        "eyes": intensity_color(part_intensity.get("eyes", 0)),
-        "ears": intensity_color(part_intensity.get("ears", 0)),
-        "nose": intensity_color(part_intensity.get("nose", 0)),
-        "throat": intensity_color(part_intensity.get("throat", 0)),
-        "esophagus": intensity_color(part_intensity.get("esophagus", 0)),
-        "thyroid": intensity_color(part_intensity.get("thyroid", 0)),
-        "lungs": intensity_color(part_intensity.get("lungs", 0)),
-        "heart": intensity_color(part_intensity.get("heart", 0)),
-        "liver": intensity_color(part_intensity.get("liver", 0)),
-        "gallbladder": intensity_color(part_intensity.get("gallbladder", 0)),
-        "stomach": intensity_color(part_intensity.get("stomach", 0)),
-        "spleen": intensity_color(part_intensity.get("spleen", 0)),
-        "pancreas": intensity_color(part_intensity.get("pancreas", 0)),
-        "kidneys": intensity_color(part_intensity.get("kidneys", 0)),
-        "intestines": intensity_color(part_intensity.get("intestines", 0)),
-        "bladder": intensity_color(part_intensity.get("bladder", 0)),
-        "spine": intensity_color(part_intensity.get("spine", 0)),
-        "joints": intensity_color(part_intensity.get("joints", 0)),
-        "legs": intensity_color(part_intensity.get("legs", 0)),
-        "blood": intensity_color(part_intensity.get("blood", 0)),
-        "skin": intensity_color(part_intensity.get("skin", 0)),
-        "lymph": intensity_color(part_intensity.get("lymph", 0)),
-        "immune": intensity_color(part_intensity.get("immune", 0)),
-    }
+    def stroke_color(score):
+        if score == 0:    return "#93c5fd"
+        elif score < 0.25: return "#4ade80"
+        elif score < 0.5:  return "#fbbf24"
+        elif score < 0.75: return "#f97316"
+        else:              return "#ef4444"
 
     import json
-    part_data_str = json.dumps(part_data_json, ensure_ascii=False)
 
-    svg_html = f"""
-<!DOCTYPE html>
+    # 장기 데이터 (연관 질병 + 기능·병리)
+    part_full_data = {}
+    for part, info in ORGAN_INFO.items():
+        diseases_str = ""
+        if part in part_diseases:
+            diseases_str = " / ".join([f"{d['kr']} {d['prob']}%" for d in part_diseases[part][:4]])
+        part_full_data[part] = {
+            "emoji":     info["emoji"],
+            "name":      info["name"],
+            "function":  info["function"],
+            "pathology": info["pathology"],
+            "diseases":  diseases_str,
+            "score":     round(part_intensity.get(part, 0) * 100),
+        }
+
+    part_data_str = json.dumps(part_full_data, ensure_ascii=False)
+
+    def c(p):   return intensity_color(part_intensity.get(p, 0))
+    def sc(p):  return stroke_color(part_intensity.get(p, 0))
+
+    svg_html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-  body {{ margin: 0; background: transparent; font-family: 'Malgun Gothic', sans-serif; }}
-  .organ {{ cursor: pointer; transition: opacity 0.2s; stroke: #94a3b8; stroke-width: 1.5; }}
-  .organ:hover {{ opacity: 0.75; stroke: #3b82f6; stroke-width: 2.5; }}
-  #info-panel {{
-    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
-    background: white; border-radius: 10px; padding: 12px 18px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15); font-size: 13px;
-    max-width: 400px; width: 90%; display: none; border-left: 4px solid #3b82f6;
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    min-height: 100vh;
   }}
-  .legend {{ display: flex; gap: 12px; justify-content: center; margin-bottom: 8px; font-size: 12px; }}
-  .legend-item {{ display: flex; align-items: center; gap: 4px; }}
-  .legend-dot {{ width: 12px; height: 12px; border-radius: 3px; }}
+
+  /* ── 범례 ── */
+  .legend {{
+    display: flex; gap: 10px; justify-content: center;
+    padding: 8px 0 4px; flex-wrap: wrap;
+  }}
+  .legend-item {{
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: #475569; font-weight: 500;
+  }}
+  .legend-dot {{
+    width: 13px; height: 13px; border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.12);
+  }}
+
+  /* ── SVG 장기 공통 ── */
+  .organ {{
+    cursor: pointer;
+    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1),
+                filter 0.18s ease,
+                opacity 0.18s;
+    transform-origin: center;
+    transform-box: fill-box;
+  }}
+  .organ:hover {{
+    transform: scale(1.12);
+    filter: drop-shadow(0 4px 10px rgba(59,130,246,0.45));
+  }}
+  .organ:active {{ transform: scale(0.96); }}
+
+  /* ── 한국어 라벨 ── */
+  .organ-label {{
+    pointer-events: none;
+    user-select: none;
+    font-size: 8.5px;
+    font-weight: 700;
+    fill: #1e3a5f;
+    letter-spacing: -0.3px;
+    paint-order: stroke;
+    stroke: rgba(255,255,255,0.85);
+    stroke-width: 3px;
+  }}
+
+  /* ── 정보 패널 ── */
+  #info-panel {{
+    position: fixed;
+    bottom: 14px; left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    background: white;
+    border-radius: 18px;
+    padding: 0;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    width: 92%; max-width: 420px;
+    display: none;
+    overflow: hidden;
+    animation: slideUp 0.28s cubic-bezier(.34,1.56,.64,1) forwards;
+  }}
+  @keyframes slideUp {{
+    from {{ transform: translateX(-50%) translateY(30px); opacity: 0; }}
+    to   {{ transform: translateX(-50%) translateY(0);   opacity: 1; }}
+  }}
+  #panel-header {{
+    padding: 12px 16px 10px;
+    display: flex; align-items: center; gap: 10px;
+  }}
+  #panel-emoji {{ font-size: 26px; line-height: 1; }}
+  #panel-title {{
+    font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.2;
+  }}
+  #panel-score {{
+    margin-left: auto;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px;
+    background: #eff6ff; color: #1d4ed8;
+  }}
+  .panel-section {{
+    padding: 8px 16px;
+    border-top: 1px solid #f1f5f9;
+    font-size: 12px; line-height: 1.55; color: #334155;
+  }}
+  .panel-section-title {{
+    font-size: 10px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 3px;
+  }}
+  #panel-diseases {{
+    padding: 8px 16px 12px;
+    border-top: 1px solid #f1f5f9;
+  }}
+  .disease-chips {{
+    display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px;
+  }}
+  .disease-chip {{
+    background: #fef2f2; color: #b91c1c;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 9px; border-radius: 20px;
+    border: 1px solid #fecaca;
+  }}
+  .no-disease {{
+    font-size: 12px; color: #94a3b8; font-style: italic;
+  }}
+  #close-btn {{
+    position: absolute; top: 10px; right: 12px;
+    background: #f1f5f9; border: none; border-radius: 50%;
+    width: 22px; height: 22px; cursor: pointer;
+    font-size: 13px; color: #64748b; line-height: 22px; text-align: center;
+  }}
+  #close-btn:hover {{ background: #e2e8f0; }}
 </style>
 </head>
 <body>
+
+<!-- 범례 -->
 <div class="legend">
-  <div class="legend-item"><div class="legend-dot" style="background:#e2e8f0"></div> 비연관</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fef9c3"></div> 낮음</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fed7aa"></div> 중간</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#fca5a5"></div> 높음</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> 매우 높음</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#dbeafe;border-color:#93c5fd"></div>비연관</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#bbf7d0;border-color:#4ade80"></div>낮음</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fde68a;border-color:#fbbf24"></div>중간</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fdba74;border-color:#f97316"></div>높음</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fca5a5;border-color:#ef4444"></div>매우 높음</div>
 </div>
-<svg viewBox="0 0 340 600" xmlns="http://www.w3.org/2000/svg" width="100%" style="max-height:560px">
-  <!-- 배경 몸통 실루엣 -->
-  <ellipse cx="170" cy="60" rx="42" ry="52" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+
+<!-- 메인 SVG -->
+<svg viewBox="0 0 380 680" xmlns="http://www.w3.org/2000/svg"
+     width="100%" style="max-height:640px; display:block;">
+  <defs>
+    <!-- 몸통 그라디언트 -->
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0f2fe"/>
+      <stop offset="100%" stop-color="#bae6fd"/>
+    </linearGradient>
+    <!-- 장기 기본 그라디언트 (밝기 오버레이) -->
+    <radialGradient id="organShine" cx="35%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <!-- 그림자 필터 -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#94a3b8" flood-opacity="0.25"/>
+    </filter>
+    <filter id="bodyShadow" x="-5%" y="-2%" width="110%" height="108%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#7dd3fc" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- ── 제목 ── -->
+  <text x="190" y="22" text-anchor="middle" font-size="15" font-weight="800"
+        fill="#0f172a" letter-spacing="-0.5">🧬 인체 해부도</text>
+  <text x="190" y="37" text-anchor="middle" font-size="10" fill="#64748b">
+    장기를 클릭하면 기능·병리 정보를 확인할 수 있어요
+  </text>
+
+  <!-- ══════════════ 몸통 실루엣 ══════════════ -->
+  <!-- 머리 -->
+  <ellipse cx="190" cy="82" rx="52" ry="60"
+           fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2" filter="url(#bodyShadow)"/>
   <!-- 목 -->
-  <rect x="155" y="108" width="30" height="30" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <rect x="172" y="138" width="36" height="36" rx="14"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
   <!-- 몸통 -->
-  <path d="M100,138 Q85,160 88,230 Q90,290 100,340 Q120,360 170,362 Q220,360 240,340 Q250,290 252,230 Q255,160 240,138 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <!-- 팔 -->
-  <path d="M100,145 Q70,160 62,210 Q58,240 65,265 Q72,285 80,285 Q90,285 94,265 Q98,240 98,210 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <path d="M240,145 Q270,160 278,210 Q282,240 275,265 Q268,285 260,285 Q250,285 246,265 Q242,240 242,210 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <!-- 다리 -->
-  <path d="M130,358 Q122,380 118,430 Q114,480 116,530 Q118,548 130,550 Q142,550 146,530 Q150,480 150,430 Q150,390 148,360 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <path d="M210,358 Q218,380 222,430 Q226,480 224,530 Q222,548 210,550 Q198,550 194,530 Q190,480 190,430 Q190,390 192,360 Z" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <path d="M112,172 Q94,196 96,274 Q98,336 112,372 Q136,394 190,396 Q244,394 268,372 Q282,336 284,274 Q286,196 268,172 Z"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2" filter="url(#bodyShadow)"/>
+  <!-- 왼팔 -->
+  <path d="M112,178 Q78,196 68,254 Q62,288 70,314 Q78,332 90,332 Q104,332 110,314 Q118,288 118,254 Z"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+  <!-- 오른팔 -->
+  <path d="M268,178 Q302,196 312,254 Q318,288 310,314 Q302,332 290,332 Q276,332 270,314 Q262,288 262,254 Z"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+  <!-- 왼다리 -->
+  <path d="M148,392 Q138,420 134,480 Q128,532 130,566 Q132,582 148,584 Q164,584 168,566 Q172,532 170,480 Q168,432 164,394 Z"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+  <!-- 오른다리 -->
+  <path d="M232,392 Q242,420 246,480 Q252,532 250,566 Q248,582 232,584 Q216,584 212,566 Q208,532 210,480 Q212,432 216,394 Z"
+        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
 
-  <!-- 뇌 -->
-  <ellipse class="organ" id="brain" cx="170" cy="52" rx="32" ry="38" fill="{colors['brain']}" data-part="brain" data-kr="뇌"/>
+  <!-- ══════════════ 피부 오버레이 (클릭 불가) ══════════════ -->
+  <rect x="96" y="172" width="188" height="224" rx="28"
+        fill="{c('skin')}" opacity="0.18" style="pointer-events:none;"/>
 
-  <!-- 피부 오버레이 — 배경 레이어, pointer-events:none으로 클릭 차단 -->
-  <rect class="organ" id="skin" x="88" y="138" width="164" height="224" rx="20"
-        fill="{colors['skin']}" opacity="0.15"
-        data-part="skin" data-kr="피부"
-        style="pointer-events:none;"/>
+  <!-- ══════════════ 장기들 ══════════════ -->
 
-  <!-- 눈 (좌우) -->
-  <ellipse class="organ" id="eyes" cx="152" cy="44" rx="7" ry="5" fill="{colors['eyes']}" data-part="eyes" data-kr="눈"/>
-  <ellipse class="organ" id="eyes2" cx="188" cy="44" rx="7" ry="5" fill="{colors['eyes']}" data-part="eyes" data-kr="눈"/>
+  <!-- 눈 (좌·우) -->
+  <g class="organ" data-part="eyes" filter="url(#softShadow)">
+    <ellipse cx="170" cy="72" rx="10" ry="7" fill="{c('eyes')}" stroke="{sc('eyes')}" stroke-width="2"/>
+    <ellipse cx="210" cy="72" rx="10" ry="7" fill="{c('eyes')}" stroke="{sc('eyes')}" stroke-width="2"/>
+    <ellipse cx="170" cy="72" rx="10" ry="7" fill="url(#organShine)"/>
+    <ellipse cx="210" cy="72" rx="10" ry="7" fill="url(#organShine)"/>
+    <circle cx="170" cy="73" r="3.5" fill="{sc('eyes')}" opacity="0.55"/>
+    <circle cx="210" cy="73" r="3.5" fill="{sc('eyes')}" opacity="0.55"/>
+  </g>
+  <text class="organ-label" x="190" y="67" text-anchor="middle">눈</text>
 
-  <!-- 귀 -->
-  <ellipse class="organ" id="ears" cx="130" cy="58" rx="6" ry="9" fill="{colors['ears']}" data-part="ears" data-kr="귀"/>
-  <ellipse class="organ" id="ears2" cx="210" cy="58" rx="6" ry="9" fill="{colors['ears']}" data-part="ears" data-kr="귀"/>
+  <!-- 귀 (좌·우) -->
+  <g class="organ" data-part="ears" filter="url(#softShadow)">
+    <ellipse cx="140" cy="88" rx="8" ry="13" fill="{c('ears')}" stroke="{sc('ears')}" stroke-width="2"/>
+    <ellipse cx="240" cy="88" rx="8" ry="13" fill="{c('ears')}" stroke="{sc('ears')}" stroke-width="2"/>
+    <ellipse cx="140" cy="88" rx="8" ry="13" fill="url(#organShine)"/>
+    <ellipse cx="240" cy="88" rx="8" ry="13" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="140" y="103" text-anchor="middle">귀</text>
+  <text class="organ-label" x="240" y="103" text-anchor="middle">귀</text>
 
   <!-- 코 -->
-  <ellipse class="organ" id="nose" cx="170" cy="68" rx="6" ry="5" fill="{colors['nose']}" data-part="nose" data-kr="코"/>
+  <g class="organ" data-part="nose" filter="url(#softShadow)">
+    <ellipse cx="190" cy="96" rx="8" ry="7" fill="{c('nose')}" stroke="{sc('nose')}" stroke-width="2"/>
+    <ellipse cx="190" cy="96" rx="8" ry="7" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="109" text-anchor="middle">코</text>
 
-  <!-- 목/인후 -->
-  <rect class="organ" id="throat" x="158" y="110" width="24" height="18" rx="5" fill="{colors['throat']}" data-part="throat" data-kr="인후"/>
+  <!-- 뇌 -->
+  <g class="organ" data-part="brain" filter="url(#softShadow)">
+    <ellipse cx="190" cy="66" rx="42" ry="30" fill="{c('brain')}" stroke="{sc('brain')}" stroke-width="2.5"/>
+    <ellipse cx="190" cy="66" rx="42" ry="30" fill="url(#organShine)"/>
+    <!-- 뇌 주름 장식 -->
+    <path d="M162,58 Q172,52 182,58 Q192,52 202,58 Q212,52 218,60"
+          fill="none" stroke="{sc('brain')}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+    <path d="M160,68 Q170,62 180,68 Q190,62 200,68 Q210,62 220,68"
+          fill="none" stroke="{sc('brain')}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  </g>
+  <text class="organ-label" x="190" y="68" text-anchor="middle">뇌</text>
+
+  <!-- 인후/편도 -->
+  <g class="organ" data-part="throat" filter="url(#softShadow)">
+    <rect x="176" y="141" width="28" height="22" rx="11"
+          fill="{c('throat')}" stroke="{sc('throat')}" stroke-width="2"/>
+    <rect x="176" y="141" width="28" height="22" rx="11" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="157" text-anchor="middle">인후</text>
 
   <!-- 갑상선 -->
-  <ellipse class="organ" id="thyroid" cx="170" cy="136" rx="18" ry="10" fill="{colors['thyroid']}" data-part="thyroid" data-kr="갑상선"/>
+  <g class="organ" data-part="thyroid" filter="url(#softShadow)">
+    <ellipse cx="190" cy="172" rx="22" ry="12" fill="{c('thyroid')}" stroke="{sc('thyroid')}" stroke-width="2"/>
+    <ellipse cx="190" cy="172" rx="22" ry="12" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="175" text-anchor="middle">갑상선</text>
 
-  <!-- 식도 -->
-  <rect class="organ" id="esophagus" x="164" y="128" width="12" height="28" rx="4" fill="{colors['esophagus']}" data-part="esophagus" data-kr="식도"/>
+  <!-- 식도 (갑상선 뒤 배경, 클릭 불가) -->
+  <rect x="184" y="155" width="12" height="34" rx="6"
+        fill="{c('esophagus')}" stroke="{sc('esophagus')}" stroke-width="1.5"
+        opacity="0.7" style="pointer-events:none;"/>
 
-  <!-- 폐 (좌우) -->
-  <path class="organ" id="lungs" d="M108,155 Q96,170 96,200 Q96,230 108,248 Q124,258 140,250 Q148,238 148,210 Q148,175 140,158 Z" fill="{colors['lungs']}" data-part="lungs" data-kr="폐"/>
-  <path class="organ" id="lungs2" d="M232,155 Q244,170 244,200 Q244,230 232,248 Q216,258 200,250 Q192,238 192,210 Q192,175 200,158 Z" fill="{colors['lungs']}" data-part="lungs" data-kr="폐"/>
+  <!-- 림프 (좌·우 목 아래) -->
+  <g class="organ" data-part="lymph" filter="url(#softShadow)">
+    <circle cx="120" cy="198" r="10" fill="{c('lymph')}" stroke="{sc('lymph')}" stroke-width="2"/>
+    <circle cx="260" cy="198" r="10" fill="{c('lymph')}" stroke="{sc('lymph')}" stroke-width="2"/>
+    <circle cx="120" cy="198" r="10" fill="url(#organShine)"/>
+    <circle cx="260" cy="198" r="10" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="120" y="213" text-anchor="middle">림프</text>
+  <text class="organ-label" x="260" y="213" text-anchor="middle">림프</text>
 
-  <!-- 심장 -->
-  <path class="organ" id="heart" d="M156,158 Q148,152 144,160 Q140,168 150,178 Q160,186 170,192 Q180,186 190,178 Q200,168 196,160 Q192,152 184,158 Q180,162 170,170 Q160,162 156,158 Z" fill="{colors['heart']}" data-part="heart" data-kr="심장"/>
+  <!-- 혈관 (팔, 클릭 가능) -->
+  <g class="organ" data-part="blood" filter="url(#softShadow)">
+    <rect x="72" y="204" width="16" height="88" rx="8"
+          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2" opacity="0.85"/>
+    <rect x="292" y="204" width="16" height="88" rx="8"
+          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2" opacity="0.85"/>
+  </g>
+  <text class="organ-label" x="80" y="252" text-anchor="middle">혈관</text>
 
-  <!-- 간 -->
-  <path class="organ" id="liver" d="M196,200 Q220,196 228,212 Q232,228 222,240 Q208,250 190,248 Q178,244 176,230 Q180,210 196,200 Z" fill="{colors['liver']}" data-part="liver" data-kr="간"/>
+  <!-- 폐 (좌·우) — 둥글둥글한 형태 -->
+  <g class="organ" data-part="lungs" filter="url(#softShadow)">
+    <path d="M118,192 Q104,204 102,234 Q100,262 114,278 Q128,290 146,282 Q156,272 156,248 Q156,216 148,196 Z"
+          fill="{c('lungs')}" stroke="{sc('lungs')}" stroke-width="2.5"/>
+    <path d="M262,192 Q276,204 278,234 Q280,262 266,278 Q252,290 234,282 Q224,272 224,248 Q224,216 232,196 Z"
+          fill="{c('lungs')}" stroke="{sc('lungs')}" stroke-width="2.5"/>
+    <path d="M118,192 Q104,204 102,234 Q100,262 114,278 Q128,290 146,282 Q156,272 156,248 Q156,216 148,196 Z"
+          fill="url(#organShine)"/>
+    <path d="M262,192 Q276,204 278,234 Q280,262 266,278 Q252,290 234,282 Q224,272 224,248 Q224,216 232,196 Z"
+          fill="url(#organShine)"/>
+    <!-- 폐 세엽 장식선 -->
+    <path d="M116,214 Q124,210 132,216" fill="none" stroke="{sc('lungs')}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+    <path d="M264,214 Q256,210 248,216" fill="none" stroke="{sc('lungs')}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  </g>
+  <text class="organ-label" x="122" y="242" text-anchor="middle">좌폐</text>
+  <text class="organ-label" x="258" y="242" text-anchor="middle">우폐</text>
+
+  <!-- 심장 — 귀여운 하트형 -->
+  <g class="organ" data-part="heart" filter="url(#softShadow)">
+    <path d="M185,196 Q174,188 168,196 Q162,204 174,216 Q182,224 190,230 Q198,224 206,216 Q218,204 212,196 Q206,188 195,196 Q193,199 190,202 Q187,199 185,196 Z"
+          fill="{c('heart')}" stroke="{sc('heart')}" stroke-width="2.5"/>
+    <path d="M185,196 Q174,188 168,196 Q162,204 174,216 Q182,224 190,230 Q198,224 206,216 Q218,204 212,196 Q206,188 195,196 Q193,199 190,202 Q187,199 185,196 Z"
+          fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="218" text-anchor="middle">심장</text>
+
+  <!-- 간 — 오른쪽 둥근 덩어리 -->
+  <g class="organ" data-part="liver" filter="url(#softShadow)">
+    <path d="M216,236 Q242,230 250,248 Q256,266 244,280 Q228,292 208,288 Q194,282 192,266 Q196,244 216,236 Z"
+          fill="{c('liver')}" stroke="{sc('liver')}" stroke-width="2.5"/>
+    <path d="M216,236 Q242,230 250,248 Q256,266 244,280 Q228,292 208,288 Q194,282 192,266 Q196,244 216,236 Z"
+          fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="224" y="264" text-anchor="middle">간</text>
 
   <!-- 담낭 -->
-  <ellipse class="organ" id="gallbladder" cx="208" cy="252" rx="10" ry="14" fill="{colors['gallbladder']}" data-part="gallbladder" data-kr="담낭"/>
+  <g class="organ" data-part="gallbladder" filter="url(#softShadow)">
+    <ellipse cx="238" cy="292" rx="12" ry="16" fill="{c('gallbladder')}" stroke="{sc('gallbladder')}" stroke-width="2"/>
+    <ellipse cx="238" cy="292" rx="12" ry="16" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="238" y="314" text-anchor="middle">담낭</text>
+
+  <!-- 비장 — 왼쪽 -->
+  <g class="organ" data-part="spleen" filter="url(#softShadow)">
+    <ellipse cx="144" cy="270" rx="18" ry="24" fill="{c('spleen')}" stroke="{sc('spleen')}" stroke-width="2"/>
+    <ellipse cx="144" cy="270" rx="18" ry="24" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="144" y="274" text-anchor="middle">비장</text>
 
   <!-- 위 -->
-  <path class="organ" id="stomach" d="M148,220 Q140,228 138,248 Q138,264 148,272 Q162,278 176,272 Q182,260 180,244 Q178,226 168,218 Z" fill="{colors['stomach']}" data-part="stomach" data-kr="위"/>
+  <g class="organ" data-part="stomach" filter="url(#softShadow)">
+    <path d="M166,254 Q155,264 154,282 Q154,300 166,310 Q180,318 196,310 Q204,298 202,280 Q200,260 188,252 Z"
+          fill="{c('stomach')}" stroke="{sc('stomach')}" stroke-width="2.5"/>
+    <path d="M166,254 Q155,264 154,282 Q154,300 166,310 Q180,318 196,310 Q204,298 202,280 Q200,260 188,252 Z"
+          fill="url(#organShine)"/>
+    <!-- 위 주름 -->
+    <path d="M162,272 Q174,268 186,274" fill="none" stroke="{sc('stomach')}" stroke-width="1.5" opacity="0.5" stroke-linecap="round"/>
+  </g>
+  <text class="organ-label" x="178" y="284" text-anchor="middle">위</text>
 
-  <!-- 비장 -->
-  <ellipse class="organ" id="spleen" cx="118" cy="234" rx="14" ry="18" fill="{colors['spleen'] if 'spleen' in colors else '#e2e8f0'}" data-part="spleen" data-kr="비장"/>
+  <!-- 췌장 — 가로 가지 모양 -->
+  <g class="organ" data-part="pancreas" filter="url(#softShadow)">
+    <rect x="154" y="314" width="62" height="18" rx="9"
+          fill="{c('pancreas')}" stroke="{sc('pancreas')}" stroke-width="2"/>
+    <rect x="154" y="314" width="62" height="18" rx="9" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="185" y="326" text-anchor="middle">췌장</text>
 
-  <!-- 췌장 -->
-  <rect class="organ" id="pancreas" x="138" y="272" width="52" height="14" rx="7" fill="{colors['pancreas']}" data-part="pancreas" data-kr="췌장"/>
+  <!-- 신장 (좌·우) -->
+  <g class="organ" data-part="kidneys" filter="url(#softShadow)">
+    <ellipse cx="142" cy="308" rx="15" ry="22" fill="{c('kidneys')}" stroke="{sc('kidneys')}" stroke-width="2"/>
+    <ellipse cx="238" cy="308" rx="15" ry="22" fill="{c('kidneys')}" stroke="{sc('kidneys')}" stroke-width="2"/>
+    <ellipse cx="142" cy="308" rx="15" ry="22" fill="url(#organShine)"/>
+    <ellipse cx="238" cy="308" rx="15" ry="22" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="142" y="312" text-anchor="middle">신장</text>
+  <text class="organ-label" x="238" y="312" text-anchor="middle">신장</text>
 
-  <!-- 신장 (좌우) -->
-  <ellipse class="organ" id="kidneys" cx="118" cy="268" rx="12" ry="18" fill="{colors['kidneys']}" data-part="kidneys" data-kr="신장"/>
-  <ellipse class="organ" id="kidneys2" cx="222" cy="268" rx="12" ry="18" fill="{colors['kidneys']}" data-part="kidneys" data-kr="신장"/>
-
-  <!-- 장 -->
-  <path class="organ" id="intestines" d="M120,288 Q106,298 108,320 Q110,340 126,350 Q148,358 170,358 Q192,358 214,350 Q230,340 232,320 Q234,298 220,288 Q200,282 170,284 Q140,282 120,288 Z" fill="{colors['intestines']}" data-part="intestines" data-kr="장"/>
+  <!-- 소장·대장 — 둥글게 감긴 모양 -->
+  <g class="organ" data-part="intestines" filter="url(#softShadow)">
+    <path d="M140,334 Q122,344 124,366 Q126,386 148,394 Q172,400 196,394 Q218,386 220,366 Q222,344 204,334 Q186,326 190,350 Q190,368 170,370 Q150,368 152,350 Q152,336 140,334 Z"
+          fill="{c('intestines')}" stroke="{sc('intestines')}" stroke-width="2.5"/>
+    <path d="M140,334 Q122,344 124,366 Q126,386 148,394 Q172,400 196,394 Q218,386 220,366 Q222,344 204,334 Q186,326 190,350 Q190,368 170,370 Q150,368 152,350 Q152,336 140,334 Z"
+          fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="365" text-anchor="middle">소장·대장</text>
 
   <!-- 방광 -->
-  <ellipse class="organ" id="bladder" cx="170" cy="352" rx="20" ry="14" fill="{colors['bladder']}" data-part="bladder" data-kr="방광"/>
+  <g class="organ" data-part="bladder" filter="url(#softShadow)">
+    <ellipse cx="190" cy="398" rx="24" ry="18" fill="{c('bladder')}" stroke="{sc('bladder')}" stroke-width="2"/>
+    <ellipse cx="190" cy="398" rx="24" ry="18" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="190" y="401" text-anchor="middle">방광</text>
 
-  <!-- 척추 — 배경 오버레이, 클릭 차단 -->
-  <rect id="spine" x="163" y="148" width="14" height="200" rx="5"
-        fill="{colors['spine']}" opacity="0.4"
-        data-part="spine" data-kr="척추"
-        style="pointer-events:none;"/>
+  <!-- 무릎 관절 -->
+  <g class="organ" data-part="joints" filter="url(#softShadow)">
+    <circle cx="148" cy="508" r="18" fill="{c('joints')}" stroke="{sc('joints')}" stroke-width="2.5"/>
+    <circle cx="232" cy="508" r="18" fill="{c('joints')}" stroke="{sc('joints')}" stroke-width="2.5"/>
+    <circle cx="148" cy="508" r="18" fill="url(#organShine)"/>
+    <circle cx="232" cy="508" r="18" fill="url(#organShine)"/>
+    <!-- 무릎 십자선 장식 -->
+    <line x1="140" y1="508" x2="156" y2="508" stroke="{sc('joints')}" stroke-width="1.5" opacity="0.5"/>
+    <line x1="148" y1="500" x2="148" y2="516" stroke="{sc('joints')}" stroke-width="1.5" opacity="0.5"/>
+    <line x1="224" y1="508" x2="240" y2="508" stroke="{sc('joints')}" stroke-width="1.5" opacity="0.5"/>
+    <line x1="232" y1="500" x2="232" y2="516" stroke="{sc('joints')}" stroke-width="1.5" opacity="0.5"/>
+  </g>
+  <text class="organ-label" x="148" y="530" text-anchor="middle">무릎관절</text>
+  <text class="organ-label" x="232" y="530" text-anchor="middle">무릎관절</text>
 
-  <!-- 관절 표시 (무릎 등) -->
-  <circle class="organ" id="joints" cx="130" cy="470" r="14" fill="{colors['joints']}" data-part="joints" data-kr="관절"/>
-  <circle class="organ" id="joints2" cx="210" cy="470" r="14" fill="{colors['joints']}" data-part="joints" data-kr="관절"/>
+  <!-- 다리 하부 (정강이) -->
+  <g class="organ" data-part="legs" filter="url(#softShadow)">
+    <rect x="133" y="527" width="30" height="52" rx="15"
+          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2" opacity="0.85"/>
+    <rect x="217" y="527" width="30" height="52" rx="15"
+          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2" opacity="0.85"/>
+  </g>
 
-  <!-- 다리/혈관 -->
-  <rect class="organ" id="legs" x="115" y="485" width="30" height="60" rx="6" fill="{colors['legs']}" data-part="legs" data-kr="다리"/>
-  <rect class="organ" id="legs2" x="195" y="485" width="30" height="60" rx="6" fill="{colors['legs']}" data-part="legs" data-kr="다리"/>
+  <!-- 면역계 배지 (우측 상단) -->
+  <g class="organ" data-part="immune" filter="url(#softShadow)">
+    <rect x="298" y="155" width="54" height="28" rx="14"
+          fill="{c('immune')}" stroke="{sc('immune')}" stroke-width="2"/>
+    <rect x="298" y="155" width="54" height="28" rx="14" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="325" y="173" text-anchor="middle">면역계</text>
 
-  <!-- 림프 (측면 점) -->
-  <circle class="organ" id="lymph" cx="104" cy="170" r="8" fill="{colors['lymph']}" data-part="lymph" data-kr="림프"/>
-  <circle class="organ" id="lymph2" cx="236" cy="170" r="8" fill="{colors['lymph']}" data-part="lymph" data-kr="림프"/>
+  <!-- 피부 배지 (좌측 상단) -->
+  <g class="organ" data-part="skin" filter="url(#softShadow)">
+    <rect x="28" y="155" width="50" height="28" rx="14"
+          fill="{c('skin')}" stroke="{sc('skin')}" stroke-width="2"/>
+    <rect x="28" y="155" width="50" height="28" rx="14" fill="url(#organShine)"/>
+  </g>
+  <text class="organ-label" x="53" y="173" text-anchor="middle">피부</text>
 
-  <!-- 혈관/혈액 (팔 부위) — 클릭 가능 -->
-  <rect class="organ" id="blood" x="64" y="170" width="14" height="80" rx="5"
-        fill="{colors['blood']}" opacity="0.6"
-        data-part="blood" data-kr="혈액/혈관"/>
-  <rect class="organ" id="blood2" x="262" y="170" width="14" height="80" rx="5"
-        fill="{colors['blood']}" opacity="0.6"
-        data-part="blood" data-kr="혈액/혈관"/>
-
-  <!-- 레이블 -->
-  <text x="170" y="20" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">인체 해부도</text>
-  <text x="170" y="33" text-anchor="middle" font-size="10" fill="#64748b">장기를 클릭하면 연관 질병을 확인할 수 있습니다</text>
 </svg>
 
+<!-- ── 정보 패널 ── -->
 <div id="info-panel">
-  <div id="info-title" style="font-weight:700; color:#1e293b; margin-bottom:4px;"></div>
-  <div id="info-diseases" style="color:#4a5568;"></div>
+  <button id="close-btn" onclick="closePanel()">✕</button>
+  <div id="panel-header">
+    <span id="panel-emoji">🫀</span>
+    <span id="panel-title">장기명</span>
+    <span id="panel-score">연관도 0%</span>
+  </div>
+  <div class="panel-section">
+    <div class="panel-section-title">⚙️ 주요 기능</div>
+    <div id="panel-function">—</div>
+  </div>
+  <div class="panel-section">
+    <div class="panel-section-title">🔬 주요 병리</div>
+    <div id="panel-pathology">—</div>
+  </div>
+  <div id="panel-diseases">
+    <div class="panel-section-title">🩺 예측 연관 질병</div>
+    <div class="disease-chips" id="panel-chips"></div>
+  </div>
 </div>
 
 <script>
-const partData = {part_data_str};
+const PART_DATA = {part_data_str};
+let hideTimer = null;
+
+function closePanel() {{
+  const p = document.getElementById('info-panel');
+  p.style.display = 'none';
+  if (hideTimer) clearTimeout(hideTimer);
+}}
 
 document.querySelectorAll('.organ').forEach(el => {{
-  el.addEventListener('click', function() {{
-    const part = this.getAttribute('data-part');
-    const kr = this.getAttribute('data-kr');
-    const panel = document.getElementById('info-panel');
-    const titleEl = document.getElementById('info-title');
-    const disEl = document.getElementById('info-diseases');
+  el.addEventListener('click', function(e) {{
+    e.stopPropagation();
+    // data-part는 <g> 또는 자식에 있을 수 있음
+    const part = this.getAttribute('data-part')
+                 || this.closest('[data-part]')?.getAttribute('data-part');
+    if (!part || !PART_DATA[part]) return;
 
-    titleEl.textContent = '🫀 ' + kr + ' — 연관 질병';
-    if (partData[part]) {{
-      disEl.textContent = partData[part];
+    const d = PART_DATA[part];
+    const panel = document.getElementById('info-panel');
+
+    document.getElementById('panel-emoji').textContent   = d.emoji;
+    document.getElementById('panel-title').textContent   = d.name;
+    document.getElementById('panel-score').textContent   = '연관도 ' + d.score + '%';
+    document.getElementById('panel-function').textContent  = d.function;
+    document.getElementById('panel-pathology').textContent = d.pathology;
+
+    const chipsEl = document.getElementById('panel-chips');
+    chipsEl.innerHTML = '';
+    if (d.diseases) {{
+      d.diseases.split(' / ').forEach(item => {{
+        const chip = document.createElement('span');
+        chip.className = 'disease-chip';
+        chip.textContent = item;
+        chipsEl.appendChild(chip);
+      }});
     }} else {{
-      disEl.textContent = '선택한 증상과 직접 연관된 질병이 없습니다.';
+      chipsEl.innerHTML = '<span class="no-disease">선택 증상과 직접 연관된 질병 없음</span>';
     }}
+
+    panel.style.animation = 'none';
+    panel.offsetHeight; // reflow
+    panel.style.animation = '';
     panel.style.display = 'block';
-    setTimeout(() => {{ panel.style.display = 'none'; }}, 5000);
+
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(closePanel, 8000);
   }});
+}});
+
+// 패널 바깥 클릭 시 닫기
+document.addEventListener('click', function(e) {{
+  const panel = document.getElementById('info-panel');
+  if (!e.target.closest('.organ') && !e.target.closest('#info-panel')) {{
+    closePanel();
+  }}
 }});
 </script>
 </body>
-</html>
-"""
+</html>"""
     return svg_html
 
 # ────────────────────────────────────────────────────────────────────────────────
