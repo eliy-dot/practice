@@ -1305,46 +1305,7 @@ def main():
     # ── 사이드바 ──────────────────────────────────────────────────────────────
     with st.sidebar:
 
-        # ════ 섹션 1: 증상 선택 ════
-        st.markdown("### 🩺 증상 선택")
-        st.caption("해당하는 증상을 모두 선택하세요 (최소 1개)")
-
-        col_reset, col_cnt = st.columns([1, 1])
-        with col_reset:
-            if st.button("🔄 초기화", key="reset_symptoms", use_container_width=True):
-                for k in list(st.session_state.keys()):
-                    if k.startswith("cb_"):
-                        st.session_state[k] = False
-                st.rerun()
-
-        already_rendered: set = set()
-        selected_symptoms = []
-        first_cat = True
-        for cat_idx, (cat_name, cat_symptoms) in enumerate(SYMPTOM_CATEGORIES.items()):
-            valid = [s for s in cat_symptoms if s in SYMPTOM_KR and s not in already_rendered]
-            already_rendered.update(valid)
-            if not valid:
-                continue
-            with st.expander(f"{'▼' if first_cat else '▶'} {cat_name} ({len(valid)}개)", expanded=first_cat):
-                for sym in valid:
-                    kr_label = SYMPTOM_KR.get(sym, sym)
-                    if st.checkbox(kr_label, key=f"cb_{cat_idx}_{sym}"):
-                        selected_symptoms.append(sym)
-            first_cat = False
-
-        with col_cnt:
-            cnt_color = "#16a34a" if len(selected_symptoms) > 0 else "#9ca3af"
-            st.markdown(
-                f"<div style='text-align:center;padding-top:6px;font-size:12px;"
-                f"font-weight:700;color:{cnt_color};'>✅ {len(selected_symptoms)}개 선택</div>",
-                unsafe_allow_html=True,
-            )
-        if len(selected_symptoms) == 0:
-            st.warning("최소 1개 이상의 증상을 선택하세요.")
-
-        st.markdown("---")
-
-        # ════ 섹션 2: 개인정보 ════
+        # ════ 섹션 1: 개인정보 ════
         st.markdown("### 👤 개인정보")
         st.caption("입력 정보는 연령·성별 맞춤 안내에 활용됩니다")
 
@@ -1432,6 +1393,45 @@ def main():
   <div style="margin-bottom:6px;">{g_chips}</div>
   <div style="font-size:11px;color:#64748b;">{g_info['tip']}</div>
 </div>""", unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # ════ 섹션 2: 증상 선택 ════
+        st.markdown("### 🩺 증상 선택")
+        st.caption("해당하는 증상을 모두 선택하세요 (최소 1개)")
+
+        col_reset, col_cnt = st.columns([1, 1])
+        with col_reset:
+            if st.button("🔄 초기화", key="reset_symptoms", use_container_width=True):
+                for k in list(st.session_state.keys()):
+                    if k.startswith("cb_"):
+                        st.session_state[k] = False
+                st.rerun()
+
+        already_rendered: set = set()
+        selected_symptoms = []
+        first_cat = True
+        for cat_idx, (cat_name, cat_symptoms) in enumerate(SYMPTOM_CATEGORIES.items()):
+            valid = [s for s in cat_symptoms if s in SYMPTOM_KR and s not in already_rendered]
+            already_rendered.update(valid)
+            if not valid:
+                continue
+            with st.expander(f"{'▼' if first_cat else '▶'} {cat_name} ({len(valid)}개)", expanded=first_cat):
+                for sym in valid:
+                    kr_label = SYMPTOM_KR.get(sym, sym)
+                    if st.checkbox(kr_label, key=f"cb_{cat_idx}_{sym}"):
+                        selected_symptoms.append(sym)
+            first_cat = False
+
+        with col_cnt:
+            cnt_color = "#16a34a" if len(selected_symptoms) > 0 else "#9ca3af"
+            st.markdown(
+                f"<div style='text-align:center;padding-top:6px;font-size:12px;"
+                f"font-weight:700;color:{cnt_color};'>✅ {len(selected_symptoms)}개 선택</div>",
+                unsafe_allow_html=True,
+            )
+        if len(selected_symptoms) == 0:
+            st.warning("최소 1개 이상의 증상을 선택하세요.")
 
         st.markdown("---")
 
