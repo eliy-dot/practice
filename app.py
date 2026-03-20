@@ -792,6 +792,12 @@ def render_body_svg(part_intensity, part_diseases):
   <!-- 뇌 -->
   <ellipse class="organ" id="brain" cx="170" cy="52" rx="32" ry="38" fill="{colors['brain']}" data-part="brain" data-kr="뇌"/>
 
+  <!-- 피부 오버레이 — 배경 레이어, pointer-events:none으로 클릭 차단 -->
+  <rect class="organ" id="skin" x="88" y="138" width="164" height="224" rx="20"
+        fill="{colors['skin']}" opacity="0.15"
+        data-part="skin" data-kr="피부"
+        style="pointer-events:none;"/>
+
   <!-- 눈 (좌우) -->
   <ellipse class="organ" id="eyes" cx="152" cy="44" rx="7" ry="5" fill="{colors['eyes']}" data-part="eyes" data-kr="눈"/>
   <ellipse class="organ" id="eyes2" cx="188" cy="44" rx="7" ry="5" fill="{colors['eyes']}" data-part="eyes" data-kr="눈"/>
@@ -844,8 +850,11 @@ def render_body_svg(part_intensity, part_diseases):
   <!-- 방광 -->
   <ellipse class="organ" id="bladder" cx="170" cy="352" rx="20" ry="14" fill="{colors['bladder']}" data-part="bladder" data-kr="방광"/>
 
-  <!-- 척추 -->
-  <rect class="organ" id="spine" x="163" y="148" width="14" height="200" rx="5" fill="{colors['spine']}" opacity="0.4" data-part="spine" data-kr="척추"/>
+  <!-- 척추 — 배경 오버레이, 클릭 차단 -->
+  <rect id="spine" x="163" y="148" width="14" height="200" rx="5"
+        fill="{colors['spine']}" opacity="0.4"
+        data-part="spine" data-kr="척추"
+        style="pointer-events:none;"/>
 
   <!-- 관절 표시 (무릎 등) -->
   <circle class="organ" id="joints" cx="130" cy="470" r="14" fill="{colors['joints']}" data-part="joints" data-kr="관절"/>
@@ -855,16 +864,17 @@ def render_body_svg(part_intensity, part_diseases):
   <rect class="organ" id="legs" x="115" y="485" width="30" height="60" rx="6" fill="{colors['legs']}" data-part="legs" data-kr="다리"/>
   <rect class="organ" id="legs2" x="195" y="485" width="30" height="60" rx="6" fill="{colors['legs']}" data-part="legs" data-kr="다리"/>
 
-  <!-- 피부 오버레이 (전신 반투명) -->
-  <rect class="organ" id="skin" x="88" y="138" width="164" height="224" rx="20" fill="{colors['skin']}" opacity="0.15" data-part="skin" data-kr="피부"/>
-
   <!-- 림프 (측면 점) -->
   <circle class="organ" id="lymph" cx="104" cy="170" r="8" fill="{colors['lymph']}" data-part="lymph" data-kr="림프"/>
   <circle class="organ" id="lymph2" cx="236" cy="170" r="8" fill="{colors['lymph']}" data-part="lymph" data-kr="림프"/>
 
-  <!-- 혈관/혈액 (팔 부위) -->
-  <rect class="organ" id="blood" x="64" y="170" width="14" height="80" rx="5" fill="{colors['blood']}" opacity="0.5" data-part="blood" data-kr="혈액/혈관"/>
-  <rect class="organ" id="blood2" x="262" y="170" width="14" height="80" rx="5" fill="{colors['blood']}" opacity="0.5" data-part="blood" data-kr="혈액/혈관"/>
+  <!-- 혈관/혈액 (팔 부위) — 클릭 가능 -->
+  <rect class="organ" id="blood" x="64" y="170" width="14" height="80" rx="5"
+        fill="{colors['blood']}" opacity="0.6"
+        data-part="blood" data-kr="혈액/혈관"/>
+  <rect class="organ" id="blood2" x="262" y="170" width="14" height="80" rx="5"
+        fill="{colors['blood']}" opacity="0.6"
+        data-part="blood" data-kr="혈액/혈관"/>
 
   <!-- 레이블 -->
   <text x="170" y="20" text-anchor="middle" font-size="13" font-weight="700" fill="#1e293b">인체 해부도</text>
@@ -998,15 +1008,24 @@ def main():
         st.markdown("### 🩺 증상 선택")
         st.caption("해당하는 증상을 모두 선택하세요 (최소 1개)")
 
+        # 카테고리 간 중복 증상 제거: 먼저 등장한 카테고리에만 표시
+        already_rendered: set = set()
         selected_symptoms = []
         first_cat = True
-        for cat_name, cat_symptoms in SYMPTOM_CATEGORIES.items():
-            # 중복 없는 증상만
-            valid = [s for s in cat_symptoms if s in SYMPTOM_KR]
+        for cat_idx, (cat_name, cat_symptoms) in enumerate(SYMPTOM_CATEGORIES.items()):
+            # 이 카테고리에서 처음 등장하는 증상만, SYMPTOM_KR에 존재하는 것만
+            valid = [
+                s for s in cat_symptoms
+                if s in SYMPTOM_KR and s not in already_rendered
+            ]
+            already_rendered.update(valid)
+            if not valid:
+                continue
             with st.expander(f"{'▼' if first_cat else '▶'} {cat_name} ({len(valid)}개)", expanded=first_cat):
                 for sym in valid:
                     kr_label = SYMPTOM_KR.get(sym, sym)
-                    if st.checkbox(f"{kr_label}", key=f"cb_{sym}"):
+                    # key = 카테고리 인덱스 + 증상명 → 전역 고유 보장
+                    if st.checkbox(kr_label, key=f"cb_{cat_idx}_{sym}"):
                         selected_symptoms.append(sym)
             first_cat = False
 
