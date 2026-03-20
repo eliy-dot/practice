@@ -1108,14 +1108,17 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="120" y="213" text-anchor="middle">림프</text>
   <text class="organ-label" x="260" y="213" text-anchor="middle">림프</text>
 
-  <!-- 혈관 (팔, 클릭 가능) -->
+  <!-- 혈관/혈액 (팔 안쪽) — 보이는 rect + 넉넉한 투명 히트영역 -->
   <g class="organ" data-part="blood">
-    <rect x="72" y="204" width="16" height="88" rx="8"
-          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2" opacity="0.85"/>
-    <rect x="292" y="204" width="16" height="88" rx="8"
-          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2" opacity="0.85"/>
+    <rect x="78" y="210" width="18" height="80" rx="9"
+          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2"/>
+    <rect x="284" y="210" width="18" height="80" rx="9"
+          fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2"/>
+    <rect x="62" y="196" width="46" height="108" rx="12" fill="transparent"/>
+    <rect x="272" y="196" width="46" height="108" rx="12" fill="transparent"/>
   </g>
-  <text class="organ-label" x="80" y="252" text-anchor="middle">혈관</text>
+  <text class="organ-label" x="87" y="258" text-anchor="middle">혈관</text>
+  <text class="organ-label" x="293" y="258" text-anchor="middle">혈관</text>
 
   <!-- 폐 (좌·우) — 둥글둥글한 형태 -->
   <g class="organ" data-part="lungs">
@@ -1226,13 +1229,20 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="148" y="530" text-anchor="middle">무릎관절</text>
   <text class="organ-label" x="232" y="530" text-anchor="middle">무릎관절</text>
 
-  <!-- 다리 하부 (정강이) -->
+  <!-- 다리 하부 (정강이) — 무릎관절 아래로 내려 겹침 방지 + 히트영역 확장 + 라벨 추가 -->
   <g class="organ" data-part="legs">
-    <rect x="133" y="527" width="30" height="52" rx="15"
-          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2" opacity="0.85"/>
-    <rect x="217" y="527" width="30" height="52" rx="15"
-          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2" opacity="0.85"/>
+    <rect x="131" y="532" width="32" height="50" rx="14"
+          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2"/>
+    <rect x="215" y="532" width="32" height="50" rx="14"
+          fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2"/>
+    <rect x="131" y="532" width="32" height="50" rx="14" fill="url(#organShine)"/>
+    <rect x="215" y="532" width="32" height="50" rx="14" fill="url(#organShine)"/>
+    <!-- 투명 히트 확장 영역 -->
+    <rect x="118" y="526" width="58" height="62" rx="16" fill="transparent"/>
+    <rect x="202" y="526" width="58" height="62" rx="16" fill="transparent"/>
   </g>
+  <text class="organ-label" x="147" y="565" text-anchor="middle">다리</text>
+  <text class="organ-label" x="231" y="565" text-anchor="middle">다리</text>
 
   <!-- 면역계 배지 (우측 상단) -->
   <g class="organ" data-part="immune">
