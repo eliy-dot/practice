@@ -863,7 +863,7 @@ def render_body_svg(part_intensity, part_diseases):
 <style>
   * {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    background: linear-gradient(135deg, #fdf8f3 0%, #f5ede0 100%);
     font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
     min-height: 100vh;
   }}
@@ -875,7 +875,7 @@ def render_body_svg(part_intensity, part_diseases):
   }}
   .legend-item {{
     display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: #475569; font-weight: 500;
+    font-size: 11px; color: #7c5c3a; font-weight: 500;
   }}
   .legend-dot {{
     width: 13px; height: 13px; border-radius: 50%;
@@ -902,7 +902,7 @@ def render_body_svg(part_intensity, part_diseases):
     user-select: none;
     font-size: 8.5px;
     font-weight: 700;
-    fill: #1e3a5f;
+    fill: #5c3d1e;
     letter-spacing: -0.3px;
     paint-order: stroke;
     stroke: rgba(255,255,255,0.85);
@@ -913,6 +913,16 @@ def render_body_svg(part_intensity, part_diseases):
 </style>
 </head>
 <body>
+
+<!-- 제목 -->
+<div style="text-align:center; padding: 10px 0 4px;">
+  <div style="font-size:15px; font-weight:800; color:#5c3d1e; letter-spacing:-0.3px;">
+    🧬 인체 해부도
+  </div>
+  <div style="font-size:10px; color:#a07850; margin-top:2px;">
+    장기를 클릭하면 기능·병리 정보를 확인할 수 있어요
+  </div>
+</div>
 
 <!-- 범례 -->
 <div class="legend">
@@ -929,8 +939,8 @@ def render_body_svg(part_intensity, part_diseases):
   <defs>
     <!-- 몸통 그라디언트 -->
     <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#e0f2fe"/>
-      <stop offset="100%" stop-color="#bae6fd"/>
+      <stop offset="0%" stop-color="#fde8d8"/>
+      <stop offset="100%" stop-color="#f8d5b8"/>
     </linearGradient>
     <!-- 장기 기본 그라디언트 (밝기 오버레이) -->
     <radialGradient id="organShine" cx="35%" cy="30%" r="60%">
@@ -939,43 +949,38 @@ def render_body_svg(part_intensity, part_diseases):
     </radialGradient>
     <!-- bodyShadow: 몸통 실루엣 전용 (장기 <g>에는 미사용 — stacking context 버그 방지) -->
     <filter id="bodyShadow" x="-5%" y="-2%" width="110%" height="108%">
-      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#7dd3fc" flood-opacity="0.3"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#d4956a" flood-opacity="0.2"/>
     </filter>
   </defs>
 
-  <!-- ── 제목 ── -->
-  <text x="190" y="22" text-anchor="middle" font-size="15" font-weight="800"
-        fill="#0f172a" letter-spacing="-0.5">🧬 인체 해부도</text>
-  <text x="190" y="37" text-anchor="middle" font-size="10" fill="#64748b">
-    장기를 클릭하면 기능·병리 정보를 확인할 수 있어요
-  </text>
+  <!-- 제목은 SVG 밖 HTML로 이동 — 여기서는 제거 -->
 
   <!-- ══════════════ 몸통 실루엣 ══════════════ -->
   <!-- 머리 -->
   <ellipse cx="190" cy="82" rx="52" ry="60"
-           fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2" filter="url(#bodyShadow)"/>
+           fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2" filter="url(#bodyShadow)"/>
   <!-- 목 -->
   <rect x="172" y="138" width="36" height="36" rx="14"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2"/>
   <!-- 몸통 -->
   <path d="M112,172 Q94,196 96,274 Q98,336 112,372 Q136,394 190,396 Q244,394 268,372 Q282,336 284,274 Q286,196 268,172 Z"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2" filter="url(#bodyShadow)"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2" filter="url(#bodyShadow)"/>
   <!-- 왼팔 -->
   <path d="M112,178 Q78,196 68,254 Q62,288 70,314 Q78,332 90,332 Q104,332 110,314 Q118,288 118,254 Z"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2"/>
   <!-- 오른팔 -->
   <path d="M268,178 Q302,196 312,254 Q318,288 310,314 Q302,332 290,332 Q276,332 270,314 Q262,288 262,254 Z"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2"/>
   <!-- 왼다리 -->
   <path d="M148,392 Q138,420 134,480 Q128,532 130,566 Q132,582 148,584 Q164,584 168,566 Q172,532 170,480 Q168,432 164,394 Z"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2"/>
   <!-- 오른다리 -->
   <path d="M232,392 Q242,420 246,480 Q252,532 250,566 Q248,582 232,584 Q216,584 212,566 Q208,532 210,480 Q212,432 216,394 Z"
-        fill="url(#bodyGrad)" stroke="#93c5fd" stroke-width="2"/>
+        fill="url(#bodyGrad)" stroke="#e0b899" stroke-width="2"/>
 
   <!-- ══════════════ 피부 오버레이 (클릭 불가) ══════════════ -->
   <rect x="96" y="172" width="188" height="224" rx="28"
-        fill="{c('skin')}" opacity="0.18" style="pointer-events:none;"/>
+        fill="{c('skin')}" opacity="0.12" style="pointer-events:none;"/>
 
   <!-- ══════════════ 장기들 ══════════════ -->
 
@@ -1485,7 +1490,7 @@ def main():
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
-  background: linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%);
+  background: linear-gradient(135deg,#fdf8f3 0%,#f5ede0 100%);
   min-height: 100vh;
 }
 .layout {
@@ -1504,7 +1509,7 @@ body {
 .section-hd {
   font-size: 13px; font-weight: 800; color: #0f172a;
   margin-bottom: 8px; padding-bottom: 4px;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid #e8d5c0;
 }
 /* 장기 카드 */
 #organ-card {
