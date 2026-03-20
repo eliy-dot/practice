@@ -909,16 +909,7 @@ def render_body_svg(part_intensity, part_diseases):
     stroke-width: 3px;
   }}
 
-  /* 패널은 Streamlit 우측 컬럼에 표시 — SVG 내부에는 클릭 피드백 토스트만 */
-  #toast {{
-    position: fixed; bottom: 12px; left: 50%;
-    transform: translateX(-50%);
-    background: rgba(15,23,42,0.82); color: white;
-    font-size: 12px; font-weight: 600;
-    padding: 7px 16px; border-radius: 20px;
-    display: none; white-space: nowrap;
-    backdrop-filter: blur(4px);
-  }}
+  /* 클릭 이벤트는 통합 HTML에서 처리 */
 </style>
 </head>
 <body>
@@ -1212,44 +1203,7 @@ def render_body_svg(part_intensity, part_diseases):
 
 </svg>
 
-<!-- 클릭 피드백 토스트 (SVG 내) -->
-<div id="toast"></div>
-
-<script>
-const PART_DATA = {part_data_str};
-let toastTimer = null;
-
-function showToast(msg) {{
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.display = 'block';
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {{ t.style.display = 'none'; }}, 2000);
-}}
-
-document.querySelectorAll('.organ').forEach(el => {{
-  el.addEventListener('click', function(e) {{
-    e.stopPropagation();
-    const part = this.getAttribute('data-part')
-                 || this.closest('[data-part]')?.getAttribute('data-part');
-    if (!part || !PART_DATA[part]) return;
-
-    const d = PART_DATA[part];
-
-    // Streamlit query_params 업데이트 → 페이지 리런 트리거
-    try {{
-      const url = new URL(window.parent.location.href);
-      url.searchParams.set('organ', part);
-      window.parent.history.replaceState(null, '', url.toString());
-    }} catch(err) {{
-      // cross-origin fallback: postMessage
-      window.parent.postMessage({{ type: 'organ_click', part: part }}, '*');
-    }}
-
-    showToast(d.emoji + ' ' + d.name + ' 선택됨');
-  }});
-}});
-</script>
+<!-- 클릭 이벤트는 통합 HTML에서 처리 — SVG 자체에는 핸들러 없음 -->
 </body>
 </html>"""
     return svg_html
@@ -1450,135 +1404,285 @@ def main():
 
     # ─ Tab 2: 인체 해부도 ─────────────────────────────────────────────────────
     with tab2:
-        col_svg, col_info = st.columns([2, 1])
-
-        # session_state 초기화
         if "selected_organ" not in st.session_state:
             st.session_state.selected_organ = None
 
-        with col_svg:
-            st.markdown("#### 🫀 인체 해부도 — 연관 부위 시각화")
-            st.caption("장기를 클릭하면 오른쪽 연관도 아래에 상세 정보가 표시됩니다 👉")
+        part_kr_map = {
+            "brain": "🧠 뇌", "heart": "❤️ 심장", "lungs": "🫁 폐",
+            "liver": "🟤 간", "stomach": "🟡 위", "intestines": "🔵 장",
+            "kidneys": "🟣 신장", "bladder": "🔷 방광", "skin": "🟠 피부",
+            "joints": "🦴 관절", "thyroid": "🟢 갑상선", "nose": "👃 코",
+            "throat": "🔴 인후", "eyes": "👁️ 눈", "ears": "👂 귀",
+            "pancreas": "🔶 췌장", "esophagus": "🟤 식도", "gallbladder": "🟡 담낭",
+            "spine": "⬜ 척추", "legs": "🦵 다리", "blood": "🩸 혈액",
+            "lymph": "🔵 림프", "immune": "🛡️ 면역", "spleen": "🟣 비장",
+        }
+        sorted_parts = sorted(part_intensity.items(), key=lambda x: x[1], reverse=True)
 
-            # SVG + postMessage → Streamlit component value 수신
-            import json as _json
-            svg_html = render_body_svg(part_intensity, part_diseases)
+        # ── 부위별 연관도 바 (우측 컬럼용 HTML 미리 조립) ──
+        bars_html = ""
+        for part, score in sorted_parts[:8]:
+            label = part_kr_map.get(part, part)
+            bar_color = "#ef4444" if score > 0.75 else "#f97316" if score > 0.5 else "#eab308" if score > 0.25 else "#22c55e"
+            bars_html += f"""
+<div style="margin-bottom:8px;">
+  <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:#374151;">
+    <span>{label}</span><span style="color:#6b7280;">{score*100:.0f}%</span>
+  </div>
+  <div style="background:#e5e7eb;border-radius:4px;height:6px;margin-top:3px;">
+    <div style="background:{bar_color};width:{score*100:.0f}%;height:6px;border-radius:4px;"></div>
+  </div>
+</div>"""
 
-            # postMessage 수신 브리지를 SVG html에 주입
-            bridge_js = """
-<script>
-// SVG iframe → parent Streamlit component value 전달
-window.addEventListener('message', function(e) {
-  if (e.data && e.data.type === 'organ_click') {
-    // Streamlit custom component value setter
-    window.parent.postMessage({
-      isStreamlitMessage: true,
-      type: 'streamlit:setComponentValue',
-      value: e.data.part
-    }, '*');
-  }
-});
-</script>"""
-            # components.html은 return값을 줄 수 없으므로
-            # SVG 클릭은 session_state query_params 우회 대신
-            # st.query_params 방식으로 전달
-            components.html(svg_html, height=660, scrolling=False)
-
-        with col_info:
-            part_kr_map = {
-                "brain": "🧠 뇌", "heart": "❤️ 심장", "lungs": "🫁 폐",
-                "liver": "🟤 간", "stomach": "🟡 위", "intestines": "🔵 장",
-                "kidneys": "🟣 신장", "bladder": "🔷 방광", "skin": "🟠 피부",
-                "joints": "🦴 관절", "thyroid": "🟢 갑상선", "nose": "👃 코",
-                "throat": "🔴 인후", "eyes": "👁️ 눈", "ears": "👂 귀",
-                "pancreas": "🔶 췌장", "esophagus": "🟤 식도", "gallbladder": "🟡 담낭",
-                "spine": "⬜ 척추", "legs": "🦵 다리", "blood": "🩸 혈액",
-                "lymph": "🔵 림프", "immune": "🛡️ 면역", "spleen": "🟣 비장",
-            }
-            sorted_parts = sorted(part_intensity.items(), key=lambda x: x[1], reverse=True)
-
-            # ── 부위별 연관도 바 (이전 디자인 그대로) ──
-            st.markdown("#### 📍 부위별 연관도")
-            for part, score in sorted_parts[:8]:
-                label = part_kr_map.get(part, part)
-                bar_color = "#ef4444" if score > 0.75 else "#f97316" if score > 0.5 else "#eab308" if score > 0.25 else "#22c55e"
-                st.markdown(f"""
-                <div style="margin-bottom:8px;">
-                  <div style="display:flex; justify-content:space-between; font-size:13px;">
-                    <span>{label}</span><span style="color:#718096;">{score*100:.0f}%</span>
-                  </div>
-                  <div style="background:#e2e8f0; border-radius:4px; height:6px; margin-top:3px;">
-                    <div style="background:{bar_color}; width:{score*100:.0f}%; height:6px; border-radius:4px;"></div>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # ── 장기 상세 패널 (인체 해부도 클릭 시 표시) ──
-            sel = st.session_state.get("selected_organ")
-            if sel and sel in ORGAN_INFO:
-                info = ORGAN_INFO[sel]
-                score_pct = round(part_intensity.get(sel, 0) * 100)
-                score_color = (
-                    "#ef4444" if score_pct > 75 else
-                    "#f97316" if score_pct > 50 else
-                    "#eab308" if score_pct > 25 else
+        # ── 장기별 상세 정보 JSON (JS에서 사용) ──
+        import json as _json
+        organ_info_js = {}
+        for part, info in ORGAN_INFO.items():
+            diseases_list = [
+                f"{d['kr']} {d['prob']}%"
+                for d in part_diseases.get(part, [])[:4]
+            ]
+            organ_info_js[part] = {
+                "emoji":     info["emoji"],
+                "name":      info["name"],
+                "function":  info["function"],
+                "pathology": info["pathology"],
+                "diseases":  diseases_list,
+                "score":     round(part_intensity.get(part, 0) * 100),
+                "score_color": (
+                    "#ef4444" if part_intensity.get(part, 0) > 0.75 else
+                    "#f97316" if part_intensity.get(part, 0) > 0.5  else
+                    "#eab308" if part_intensity.get(part, 0) > 0.25 else
                     "#22c55e"
-                )
-                # ── 연관 질병 칩 조립 ──
-                disease_chips_html = ""
-                if sel in part_diseases:
-                    chips = "".join(
-                        f'<span style="background:#fef2f2;color:#b91c1c;font-size:11px;'
-                        f'font-weight:600;padding:2px 8px;border-radius:20px;'
-                        f'border:1px solid #fecaca;">'
-                        f'{d["kr"]} {d["prob"]}%</span>'
-                        for d in part_diseases[sel][:4]
-                    )
-                    disease_chips_html = (
-                        '<div style="font-size:10px;font-weight:700;color:#64748b;'
-                        'text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">'
-                        "🩺 예측 연관 질병</div>"
-                        f'<div style="display:flex;flex-wrap:wrap;gap:5px;">{chips}</div>'
-                    )
+                ),
+            }
+        organ_info_str = _json.dumps(organ_info_js, ensure_ascii=False)
 
-                card_html = f"""
-<div style="background:white;border-radius:14px;padding:14px 16px;
-            box-shadow:0 2px 12px rgba(0,0,0,0.08);
-            border-left:4px solid {score_color};margin-top:4px;">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-    <span style="font-size:26px;line-height:1;">{info["emoji"]}</span>
-    <div>
-      <div style="font-size:16px;font-weight:800;color:#0f172a;">{info["name"]}</div>
-      <span style="font-size:11px;font-weight:700;background:#eff6ff;color:#1d4ed8;
-                   padding:2px 8px;border-radius:20px;">연관도 {score_pct}%</span>
+        # ── SVG 생성 ──
+        svg_html = render_body_svg(part_intensity, part_diseases)
+        # SVG html에서 </body> 직전에 organ_info_str 주입
+        svg_body = svg_html  # 이미 완전한 HTML
+
+        # ── 통합 레이아웃: SVG(좌) + 패널(우) 하나의 components.html ──
+        combined_html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* {{ box-sizing: border-box; margin: 0; padding: 0; }}
+body {{
+  font-family: 'Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+  background: transparent;
+}}
+.layout {{
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+}}
+/* ── 좌: SVG 래퍼 ── */
+.svg-wrap {{
+  flex: 2;
+  min-width: 0;
+}}
+/* ── 우: 정보 패널 ── */
+.info-wrap {{
+  flex: 1;
+  min-width: 220px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}}
+.section-title {{
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #e2e8f0;
+}}
+/* 연관도 바 */
+.bars-block {{
+  margin-bottom: 12px;
+}}
+/* 장기 상세 카드 */
+#organ-card {{
+  background: white;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+  border-left: 4px solid #22c55e;
+  display: none;
+  animation: fadeIn 0.22s ease;
+}}
+@keyframes fadeIn {{
+  from {{ opacity:0; transform:translateY(6px); }}
+  to   {{ opacity:1; transform:translateY(0); }}
+}}
+.card-header {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.card-emoji {{ font-size: 24px; line-height: 1; }}
+.card-name  {{ font-size: 15px; font-weight: 800; color: #0f172a; }}
+.card-score {{
+  display: inline-block;
+  font-size: 11px; font-weight: 700;
+  background: #eff6ff; color: #1d4ed8;
+  padding: 2px 8px; border-radius: 20px;
+  margin-top: 2px;
+}}
+.card-label {{
+  font-size: 10px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin: 8px 0 3px;
+}}
+.card-text  {{ font-size: 12px; color: #334155; line-height: 1.6; }}
+.chips      {{ display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }}
+.chip {{
+  background: #fef2f2; color: #b91c1c;
+  font-size: 11px; font-weight: 600;
+  padding: 2px 8px; border-radius: 20px;
+  border: 1px solid #fecaca;
+}}
+/* 빈 상태 */
+#organ-empty {{
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  border: 2px dashed #e2e8f0;
+  color: #94a3b8;
+}}
+.empty-icon  {{ font-size: 28px; margin-bottom: 6px; }}
+.empty-text  {{ font-size: 12px; font-weight: 600; line-height: 1.5; }}
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── 좌: 인체 해부도 SVG ── -->
+  <div class="svg-wrap" id="svg-container"></div>
+
+  <!-- ── 우: 정보 패널 ── -->
+  <div class="info-wrap">
+    <div class="section-title">📍 부위별 연관도</div>
+    <div class="bars-block">{bars_html}</div>
+
+    <div class="section-title" style="margin-top:4px;">🔬 장기 상세 정보</div>
+
+    <!-- 빈 상태 -->
+    <div id="organ-empty">
+      <div class="empty-icon">🫀</div>
+      <div class="empty-text">왼쪽 인체 해부도에서<br>장기를 클릭하세요</div>
+    </div>
+
+    <!-- 장기 카드 -->
+    <div id="organ-card">
+      <div class="card-header">
+        <span class="card-emoji" id="c-emoji"></span>
+        <div>
+          <div class="card-name" id="c-name"></div>
+          <span class="card-score" id="c-score"></span>
+        </div>
+      </div>
+      <div class="card-label">⚙️ 주요 기능</div>
+      <div class="card-text" id="c-function"></div>
+      <div class="card-label">🔬 주요 병리</div>
+      <div class="card-text" id="c-pathology"></div>
+      <div class="card-label" id="c-dis-label" style="display:none;">🩺 예측 연관 질병</div>
+      <div class="chips" id="c-chips"></div>
     </div>
   </div>
-  <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:0.5px;
-              text-transform:uppercase;margin-bottom:3px;">⚙️ 주요 기능</div>
-  <div style="font-size:12px;color:#334155;line-height:1.6;margin-bottom:10px;">
-    {info["function"]}
-  </div>
-  <div style="font-size:10px;font-weight:700;color:#64748b;letter-spacing:0.5px;
-              text-transform:uppercase;margin-bottom:3px;">🔬 주요 병리</div>
-  <div style="font-size:12px;color:#334155;line-height:1.6;margin-bottom:6px;">
-    {info["pathology"]}
-  </div>
-  {disease_chips_html}
-</div>"""
-                st.markdown("---")
-                st.markdown(card_html, unsafe_allow_html=True)
-            else:
-                st.markdown("---")
-                st.markdown("""
-<div style="background:#f8fafc;border-radius:12px;padding:18px;text-align:center;
-            border:2px dashed #e2e8f0;color:#94a3b8;margin-top:4px;">
-  <div style="font-size:24px;margin-bottom:6px;">🫀</div>
-  <div style="font-size:12px;font-weight:600;line-height:1.5;">
-    왼쪽 인체 해부도에서<br>장기를 클릭하세요
-  </div>
 </div>
-                """, unsafe_allow_html=True)
 
+<script>
+// ── SVG를 동적으로 삽입 (별도 iframe 없이 같은 DOM에) ──
+const ORGAN_INFO = {organ_info_str};
+
+// SVG HTML을 파싱해서 <svg> 태그만 추출 후 삽입
+const svgWrap = document.getElementById('svg-container');
+svgWrap.innerHTML = `{svg_inner}`;
+
+// ── 장기 클릭 핸들러 ──
+function onOrganClick(part) {{
+  const d = ORGAN_INFO[part];
+  if (!d) return;
+
+  // 카드 border 색상
+  const card = document.getElementById('organ-card');
+  card.style.borderLeftColor = d.score_color;
+
+  document.getElementById('c-emoji').textContent    = d.emoji;
+  document.getElementById('c-name').textContent     = d.name;
+  document.getElementById('c-score').textContent    = '연관도 ' + d.score + '%';
+  document.getElementById('c-function').textContent = d.function;
+  document.getElementById('c-pathology').textContent= d.pathology;
+
+  const chipsEl   = document.getElementById('c-chips');
+  const disLabel  = document.getElementById('c-dis-label');
+  chipsEl.innerHTML = '';
+  if (d.diseases && d.diseases.length > 0) {{
+    disLabel.style.display = 'block';
+    d.diseases.forEach(txt => {{
+      const span = document.createElement('span');
+      span.className = 'chip';
+      span.textContent = txt;
+      chipsEl.appendChild(span);
+    }});
+  }} else {{
+    disLabel.style.display = 'none';
+  }}
+
+  document.getElementById('organ-empty').style.display = 'none';
+  // 재애니메이션
+  card.style.display = 'none';
+  card.offsetHeight;
+  card.style.display = 'block';
+}}
+
+// SVG 장기 클릭 이벤트 등록 (DOM 삽입 후)
+document.querySelectorAll('.organ').forEach(el => {{
+  el.addEventListener('click', function(e) {{
+    e.stopPropagation();
+    const part = this.getAttribute('data-part')
+                 || this.closest('[data-part]')?.getAttribute('data-part');
+    if (part && ORGAN_INFO[part]) onOrganClick(part);
+  }});
+}});
+</script>
+</body>
+</html>"""
+
+        # SVG에서 <body> 내부 콘텐츠만 추출해서 svg_inner에 삽입
+        import re as _re
+        body_match = _re.search(r'<body[^>]*>(.*)</body>', svg_body, _re.DOTALL)
+        if body_match:
+            svg_inner_raw = body_match.group(1).strip()
+        else:
+            svg_inner_raw = svg_body
+
+        # JS 템플릿 리터럴 내부 백틱 이스케이프, { } 이스케이프
+        svg_inner_escaped = (
+            svg_inner_raw
+            .replace('\\', '\\\\')
+            .replace('`', '\\`')
+            .replace('${', '\\${')
+        )
+
+        combined_html = combined_html.replace('{svg_inner}', svg_inner_escaped)
+
+        col_svg, col_info = st.columns([2, 1])
+        with col_svg:
+            st.markdown("#### 🫀 인체 해부도 — 연관 부위 시각화")
+            st.caption("장기를 클릭하면 오른쪽에 기능·병리 정보가 바로 표시됩니다")
+        with col_info:
+            st.markdown("#### &nbsp;", unsafe_allow_html=True)
+
+        components.html(combined_html, height=720, scrolling=False)
 
     # ─ Tab 3: 치료·약품 정보 ──────────────────────────────────────────────────
     with tab3:
