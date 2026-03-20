@@ -1304,45 +1304,205 @@ def main():
 
     # ── 사이드바 ──────────────────────────────────────────────────────────────
     with st.sidebar:
-        st.markdown("### ⚙️ 설정")
-        model_choice = st.radio("ML 모델 선택", ["앙상블", "Naive Bayes", "Random Forest"],
-                                 help="앙상블: NB+RF 확률 평균 (권장)")
-        top_n = st.slider("결과 표시 개수", min_value=3, max_value=15, value=8,
-                           help="상위 N개 예측 질병 표시")
+
+        # ── 사이드바 탭: 증상 선택 / 개인정보 / 설정 ──
+        sb_tab1, sb_tab2, sb_tab3 = st.tabs(["🩺 증상", "👤 개인정보", "⚙️ 설정"])
+
+        # ════════════════════════════════════════
+        # 사이드바 탭 1: 증상 선택
+        # ════════════════════════════════════════
+        with sb_tab1:
+            st.caption("해당하는 증상을 모두 선택하세요 (최소 1개)")
+
+            # ── 초기화 버튼 ──
+            col_reset, col_cnt = st.columns([1, 1])
+            with col_reset:
+                if st.button("🔄 초기화", key="reset_symptoms", use_container_width=True):
+                    # 체크박스 key를 모두 False로 초기화
+                    for k in list(st.session_state.keys()):
+                        if k.startswith("cb_"):
+                            st.session_state[k] = False
+                    st.rerun()
+
+            # ── 카테고리 체크박스 ──
+            already_rendered: set = set()
+            selected_symptoms = []
+            first_cat = True
+            for cat_idx, (cat_name, cat_symptoms) in enumerate(SYMPTOM_CATEGORIES.items()):
+                valid = [
+                    s for s in cat_symptoms
+                    if s in SYMPTOM_KR and s not in already_rendered
+                ]
+                already_rendered.update(valid)
+                if not valid:
+                    continue
+                with st.expander(
+                    f"{'▼' if first_cat else '▶'} {cat_name} ({len(valid)}개)",
+                    expanded=first_cat
+                ):
+                    for sym in valid:
+                        kr_label = SYMPTOM_KR.get(sym, sym)
+                        if st.checkbox(kr_label, key=f"cb_{cat_idx}_{sym}"):
+                            selected_symptoms.append(sym)
+                first_cat = False
+
+            with col_cnt:
+                cnt_color = "#16a34a" if len(selected_symptoms) > 0 else "#9ca3af"
+                st.markdown(
+                    f"<div style='text-align:center;padding-top:6px;"
+                    f"font-size:12px;font-weight:700;color:{cnt_color};'>"
+                    f"✅ {len(selected_symptoms)}개 선택</div>",
+                    unsafe_allow_html=True,
+                )
+
+            if len(selected_symptoms) == 0:
+                st.warning("최소 1개 이상의 증상을 선택하세요.")
+
+        # ════════════════════════════════════════
+        # 사이드바 탭 2: 개인정보 (연령·성별)
+        # ════════════════════════════════════════
+        with sb_tab2:
+            st.caption("입력 정보는 예측 정확도 보정에 활용됩니다")
+
+            # 성별
+            st.markdown("**성별**")
+            gender = st.radio(
+                "성별 선택",
+                ["선택 안 함", "남성", "여성"],
+                horizontal=True,
+                label_visibility="collapsed",
+                key="gender_radio",
+            )
+
+            st.markdown("**연령대**")
+            age_group = st.select_slider(
+                "연령대",
+                options=["10대 이하", "10대", "20대", "30대", "40대", "50대", "60대", "70대 이상"],
+                value="30대",
+                label_visibility="collapsed",
+                key="age_slider",
+            )
+
+            # 연령대별 취약 질환 안내
+            AGE_RISK = {
+                "10대 이하": {"label": "소아·청소년",  "color": "#3b82f6",
+                    "risks": ["급성 편도염", "수두", "천식", "성장통", "알레르기"],
+                    "tip": "예방접종 및 위생 관리가 중요합니다."},
+                "10대":     {"label": "청소년",         "color": "#6366f1",
+                    "risks": ["여드름", "척추측만증", "알레르기 비염", "우울증"],
+                    "tip": "성장기 영양 섭취와 정신 건강에 유의하세요."},
+                "20대":     {"label": "청년",            "color": "#10b981",
+                    "risks": ["위염", "편두통", "불안장애", "요통", "갑상선 질환"],
+                    "tip": "불규칙한 생활 습관 개선이 핵심입니다."},
+                "30대":     {"label": "장년 초반",       "color": "#f59e0b",
+                    "risks": ["고혈압 전단계", "당뇨 전단계", "역류성 식도염", "디스크"],
+                    "tip": "정기 건강검진을 시작하기 좋은 시기입니다."},
+                "40대":     {"label": "중년",            "color": "#f97316",
+                    "risks": ["고혈압", "당뇨병", "심혈관 질환", "갱년기", "지방간"],
+                    "tip": "식단 관리와 유산소 운동을 꾸준히 하세요."},
+                "50대":     {"label": "중·장년",         "color": "#ef4444",
+                    "risks": ["관절염", "골다공증", "암 조기 발견", "뇌졸중 위험"],
+                    "tip": "암 검진 주기를 철저히 지키세요."},
+                "60대":     {"label": "장년",            "color": "#dc2626",
+                    "risks": ["치매 전단계", "심부전", "백내장", "낙상 위험"],
+                    "tip": "인지 기능 유지와 낙상 예방이 중요합니다."},
+                "70대 이상": {"label": "노년",           "color": "#b91c1c",
+                    "risks": ["치매", "뇌졸중", "심근경색", "폐렴", "골절"],
+                    "tip": "복약 관리와 사회적 연결이 건강의 핵심입니다."},
+            }
+
+            risk_info = AGE_RISK.get(age_group, {})
+            risk_color = risk_info.get("color", "#64748b")
+            risk_label = risk_info.get("label", age_group)
+            risks      = risk_info.get("risks", [])
+            tip        = risk_info.get("tip", "")
+
+            # 연령대 카드
+            risk_chips = "".join([
+                f"<span style='background:#fef3c7;color:#92400e;font-size:10px;"
+                f"font-weight:600;padding:2px 7px;border-radius:12px;"
+                f"border:1px solid #fde68a;margin:2px;display:inline-block;'>{r}</span>"
+                for r in risks
+            ])
+            st.markdown(f"""
+<div style="background:white;border-radius:12px;padding:12px 14px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid {risk_color};
+            margin-top:8px;">
+  <div style="font-size:13px;font-weight:800;color:#1e293b;margin-bottom:4px;">
+    {age_group} ({risk_label}) 주의 질환
+  </div>
+  <div style="margin-bottom:8px;">{risk_chips}</div>
+  <div style="font-size:11px;color:#64748b;line-height:1.5;">💡 {tip}</div>
+</div>
+            """, unsafe_allow_html=True)
+
+            # 성별 특이 질환 안내
+            if gender != "선택 안 함":
+                GENDER_RISK = {
+                    "남성": {
+                        "risks": ["전립선 질환", "통풍", "심근경색", "탈모"],
+                        "color": "#3b82f6", "tip": "심혈관 질환 위험이 상대적으로 높습니다.",
+                    },
+                    "여성": {
+                        "risks": ["갑상선 질환", "골다공증", "유방암", "자궁 질환"],
+                        "color": "#ec4899", "tip": "호르몬 변화에 따른 정기 검진이 중요합니다.",
+                    },
+                }
+                g_info = GENDER_RISK[gender]
+                g_chips = "".join([
+                    f"<span style='background:#f0f9ff;color:#0369a1;font-size:10px;"
+                    f"font-weight:600;padding:2px 7px;border-radius:12px;"
+                    f"border:1px solid #bae6fd;margin:2px;display:inline-block;'>{r}</span>"
+                    for r in g_info["risks"]
+                ])
+                st.markdown(f"""
+<div style="background:white;border-radius:12px;padding:12px 14px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.07);border-left:4px solid {g_info['color']};
+            margin-top:8px;">
+  <div style="font-size:13px;font-weight:800;color:#1e293b;margin-bottom:4px;">
+    {gender} 특이 주의 질환
+  </div>
+  <div style="margin-bottom:8px;">{g_chips}</div>
+  <div style="font-size:11px;color:#64748b;">{g_info['tip']}</div>
+</div>
+                """, unsafe_allow_html=True)
+
+        # ════════════════════════════════════════
+        # 사이드바 탭 3: ML 설정
+        # ════════════════════════════════════════
+        with sb_tab3:
+            model_choice = st.radio(
+                "ML 모델 선택",
+                ["앙상블", "Naive Bayes", "Random Forest"],
+                help="앙상블: NB+RF 확률 평균 (권장)",
+                key="model_radio",
+            )
+            top_n = st.slider(
+                "결과 표시 개수", min_value=3, max_value=15, value=8,
+                help="상위 N개 예측 질병 표시",
+                key="topn_slider",
+            )
+            st.markdown("---")
+            st.caption("ℹ️ 앙상블 모드는 NB와 RF 확률을 평균 내어 더 안정적인 예측을 제공합니다.")
+
+        # ── 예측 버튼 (탭 외부, 항상 표시) ──
         st.markdown("---")
-        st.markdown("### 🩺 증상 선택")
-        st.caption("해당하는 증상을 모두 선택하세요 (최소 1개)")
+        predict_btn = st.button(
+            "🔍 질병 예측 실행",
+            type="primary",
+            disabled=(len(selected_symptoms) == 0),
+            use_container_width=True,
+        )
 
-        # 카테고리 간 중복 증상 제거: 먼저 등장한 카테고리에만 표시
-        already_rendered: set = set()
-        selected_symptoms = []
-        first_cat = True
-        for cat_idx, (cat_name, cat_symptoms) in enumerate(SYMPTOM_CATEGORIES.items()):
-            # 이 카테고리에서 처음 등장하는 증상만, SYMPTOM_KR에 존재하는 것만
-            valid = [
-                s for s in cat_symptoms
-                if s in SYMPTOM_KR and s not in already_rendered
-            ]
-            already_rendered.update(valid)
-            if not valid:
-                continue
-            with st.expander(f"{'▼' if first_cat else '▶'} {cat_name} ({len(valid)}개)", expanded=first_cat):
-                for sym in valid:
-                    kr_label = SYMPTOM_KR.get(sym, sym)
-                    # key = 카테고리 인덱스 + 증상명 → 전역 고유 보장
-                    if st.checkbox(kr_label, key=f"cb_{cat_idx}_{sym}"):
-                        selected_symptoms.append(sym)
-            first_cat = False
-
-        st.markdown("---")
-        st.caption(f"✅ 선택된 증상: **{len(selected_symptoms)}개**")
-
-        if len(selected_symptoms) == 0:
-            st.warning("최소 1개 이상의 증상을 선택하세요.")
-
-        predict_btn = st.button("🔍 질병 예측 실행", type="primary",
-                                 disabled=(len(selected_symptoms) == 0),
-                                 use_container_width=True)
+    # ── model_choice / top_n fallback (탭3 미방문 시 기본값) ─────────────────
+    if "model_radio" not in st.session_state:
+        model_choice = "앙상블"
+    else:
+        model_choice = st.session_state.get("model_radio", "앙상블")
+    if "topn_slider" not in st.session_state:
+        top_n = 8
+    else:
+        top_n = st.session_state.get("topn_slider", 8)
 
     # ── 메인 콘텐츠 ───────────────────────────────────────────────────────────
     if len(selected_symptoms) == 0:
