@@ -881,16 +881,15 @@ def render_body_svg(part_intensity, part_diseases):
   .organ {{
     cursor: pointer;
     transition: transform 0.18s cubic-bezier(.34,1.56,.64,1),
-                filter 0.18s ease,
-                opacity 0.18s;
+                filter 0.18s ease;
     transform-origin: center;
     transform-box: fill-box;
   }}
   .organ:hover {{
-    transform: scale(1.12);
-    filter: drop-shadow(0 4px 10px rgba(59,130,246,0.45));
+    transform: scale(1.10);
+    filter: drop-shadow(0 3px 8px rgba(59,130,246,0.5));
   }}
-  .organ:active {{ transform: scale(0.96); }}
+  .organ:active {{ transform: scale(0.95); }}
 
   /* ── 한국어 라벨 ── */
   .organ-label {{
@@ -997,10 +996,7 @@ def render_body_svg(part_intensity, part_diseases):
       <stop offset="0%" stop-color="white" stop-opacity="0.35"/>
       <stop offset="100%" stop-color="white" stop-opacity="0"/>
     </radialGradient>
-    <!-- 그림자 필터 -->
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#94a3b8" flood-opacity="0.25"/>
-    </filter>
+    <!-- bodyShadow: 몸통 실루엣 전용 (장기 <g>에는 미사용 — stacking context 버그 방지) -->
     <filter id="bodyShadow" x="-5%" y="-2%" width="110%" height="108%">
       <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#7dd3fc" flood-opacity="0.3"/>
     </filter>
@@ -1043,7 +1039,7 @@ def render_body_svg(part_intensity, part_diseases):
   <!-- ══════════════ 장기들 ══════════════ -->
 
   <!-- 눈 (좌·우) -->
-  <g class="organ" data-part="eyes" filter="url(#softShadow)">
+  <g class="organ" data-part="eyes">
     <ellipse cx="170" cy="72" rx="10" ry="7" fill="{c('eyes')}" stroke="{sc('eyes')}" stroke-width="2"/>
     <ellipse cx="210" cy="72" rx="10" ry="7" fill="{c('eyes')}" stroke="{sc('eyes')}" stroke-width="2"/>
     <ellipse cx="170" cy="72" rx="10" ry="7" fill="url(#organShine)"/>
@@ -1054,7 +1050,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="190" y="67" text-anchor="middle">눈</text>
 
   <!-- 귀 (좌·우) -->
-  <g class="organ" data-part="ears" filter="url(#softShadow)">
+  <g class="organ" data-part="ears">
     <ellipse cx="140" cy="88" rx="8" ry="13" fill="{c('ears')}" stroke="{sc('ears')}" stroke-width="2"/>
     <ellipse cx="240" cy="88" rx="8" ry="13" fill="{c('ears')}" stroke="{sc('ears')}" stroke-width="2"/>
     <ellipse cx="140" cy="88" rx="8" ry="13" fill="url(#organShine)"/>
@@ -1064,14 +1060,14 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="240" y="103" text-anchor="middle">귀</text>
 
   <!-- 코 -->
-  <g class="organ" data-part="nose" filter="url(#softShadow)">
+  <g class="organ" data-part="nose">
     <ellipse cx="190" cy="96" rx="8" ry="7" fill="{c('nose')}" stroke="{sc('nose')}" stroke-width="2"/>
     <ellipse cx="190" cy="96" rx="8" ry="7" fill="url(#organShine)"/>
   </g>
   <text class="organ-label" x="190" y="109" text-anchor="middle">코</text>
 
   <!-- 뇌 -->
-  <g class="organ" data-part="brain" filter="url(#softShadow)">
+  <g class="organ" data-part="brain">
     <ellipse cx="190" cy="66" rx="42" ry="30" fill="{c('brain')}" stroke="{sc('brain')}" stroke-width="2.5"/>
     <ellipse cx="190" cy="66" rx="42" ry="30" fill="url(#organShine)"/>
     <!-- 뇌 주름 장식 -->
@@ -1083,7 +1079,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="190" y="68" text-anchor="middle">뇌</text>
 
   <!-- 인후/편도 -->
-  <g class="organ" data-part="throat" filter="url(#softShadow)">
+  <g class="organ" data-part="throat">
     <rect x="176" y="141" width="28" height="22" rx="11"
           fill="{c('throat')}" stroke="{sc('throat')}" stroke-width="2"/>
     <rect x="176" y="141" width="28" height="22" rx="11" fill="url(#organShine)"/>
@@ -1091,7 +1087,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="190" y="157" text-anchor="middle">인후</text>
 
   <!-- 갑상선 -->
-  <g class="organ" data-part="thyroid" filter="url(#softShadow)">
+  <g class="organ" data-part="thyroid">
     <ellipse cx="190" cy="172" rx="22" ry="12" fill="{c('thyroid')}" stroke="{sc('thyroid')}" stroke-width="2"/>
     <ellipse cx="190" cy="172" rx="22" ry="12" fill="url(#organShine)"/>
   </g>
@@ -1103,7 +1099,7 @@ def render_body_svg(part_intensity, part_diseases):
         opacity="0.7" style="pointer-events:none;"/>
 
   <!-- 림프 (좌·우 목 아래) -->
-  <g class="organ" data-part="lymph" filter="url(#softShadow)">
+  <g class="organ" data-part="lymph">
     <circle cx="120" cy="198" r="10" fill="{c('lymph')}" stroke="{sc('lymph')}" stroke-width="2"/>
     <circle cx="260" cy="198" r="10" fill="{c('lymph')}" stroke="{sc('lymph')}" stroke-width="2"/>
     <circle cx="120" cy="198" r="10" fill="url(#organShine)"/>
@@ -1113,7 +1109,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="260" y="213" text-anchor="middle">림프</text>
 
   <!-- 혈관 (팔, 클릭 가능) -->
-  <g class="organ" data-part="blood" filter="url(#softShadow)">
+  <g class="organ" data-part="blood">
     <rect x="72" y="204" width="16" height="88" rx="8"
           fill="{c('blood')}" stroke="{sc('blood')}" stroke-width="2" opacity="0.85"/>
     <rect x="292" y="204" width="16" height="88" rx="8"
@@ -1122,7 +1118,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="80" y="252" text-anchor="middle">혈관</text>
 
   <!-- 폐 (좌·우) — 둥글둥글한 형태 -->
-  <g class="organ" data-part="lungs" filter="url(#softShadow)">
+  <g class="organ" data-part="lungs">
     <path d="M118,192 Q104,204 102,234 Q100,262 114,278 Q128,290 146,282 Q156,272 156,248 Q156,216 148,196 Z"
           fill="{c('lungs')}" stroke="{sc('lungs')}" stroke-width="2.5"/>
     <path d="M262,192 Q276,204 278,234 Q280,262 266,278 Q252,290 234,282 Q224,272 224,248 Q224,216 232,196 Z"
@@ -1139,7 +1135,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="258" y="242" text-anchor="middle">우폐</text>
 
   <!-- 심장 — 귀여운 하트형 -->
-  <g class="organ" data-part="heart" filter="url(#softShadow)">
+  <g class="organ" data-part="heart">
     <path d="M185,196 Q174,188 168,196 Q162,204 174,216 Q182,224 190,230 Q198,224 206,216 Q218,204 212,196 Q206,188 195,196 Q193,199 190,202 Q187,199 185,196 Z"
           fill="{c('heart')}" stroke="{sc('heart')}" stroke-width="2.5"/>
     <path d="M185,196 Q174,188 168,196 Q162,204 174,216 Q182,224 190,230 Q198,224 206,216 Q218,204 212,196 Q206,188 195,196 Q193,199 190,202 Q187,199 185,196 Z"
@@ -1148,7 +1144,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="190" y="218" text-anchor="middle">심장</text>
 
   <!-- 간 — 오른쪽 둥근 덩어리 -->
-  <g class="organ" data-part="liver" filter="url(#softShadow)">
+  <g class="organ" data-part="liver">
     <path d="M216,236 Q242,230 250,248 Q256,266 244,280 Q228,292 208,288 Q194,282 192,266 Q196,244 216,236 Z"
           fill="{c('liver')}" stroke="{sc('liver')}" stroke-width="2.5"/>
     <path d="M216,236 Q242,230 250,248 Q256,266 244,280 Q228,292 208,288 Q194,282 192,266 Q196,244 216,236 Z"
@@ -1157,21 +1153,21 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="224" y="264" text-anchor="middle">간</text>
 
   <!-- 담낭 -->
-  <g class="organ" data-part="gallbladder" filter="url(#softShadow)">
+  <g class="organ" data-part="gallbladder">
     <ellipse cx="238" cy="292" rx="12" ry="16" fill="{c('gallbladder')}" stroke="{sc('gallbladder')}" stroke-width="2"/>
     <ellipse cx="238" cy="292" rx="12" ry="16" fill="url(#organShine)"/>
   </g>
   <text class="organ-label" x="238" y="314" text-anchor="middle">담낭</text>
 
   <!-- 비장 — 왼쪽 -->
-  <g class="organ" data-part="spleen" filter="url(#softShadow)">
+  <g class="organ" data-part="spleen">
     <ellipse cx="144" cy="270" rx="18" ry="24" fill="{c('spleen')}" stroke="{sc('spleen')}" stroke-width="2"/>
     <ellipse cx="144" cy="270" rx="18" ry="24" fill="url(#organShine)"/>
   </g>
   <text class="organ-label" x="144" y="274" text-anchor="middle">비장</text>
 
   <!-- 위 -->
-  <g class="organ" data-part="stomach" filter="url(#softShadow)">
+  <g class="organ" data-part="stomach">
     <path d="M166,254 Q155,264 154,282 Q154,300 166,310 Q180,318 196,310 Q204,298 202,280 Q200,260 188,252 Z"
           fill="{c('stomach')}" stroke="{sc('stomach')}" stroke-width="2.5"/>
     <path d="M166,254 Q155,264 154,282 Q154,300 166,310 Q180,318 196,310 Q204,298 202,280 Q200,260 188,252 Z"
@@ -1182,7 +1178,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="178" y="284" text-anchor="middle">위</text>
 
   <!-- 췌장 — 가로 가지 모양 -->
-  <g class="organ" data-part="pancreas" filter="url(#softShadow)">
+  <g class="organ" data-part="pancreas">
     <rect x="154" y="314" width="62" height="18" rx="9"
           fill="{c('pancreas')}" stroke="{sc('pancreas')}" stroke-width="2"/>
     <rect x="154" y="314" width="62" height="18" rx="9" fill="url(#organShine)"/>
@@ -1190,7 +1186,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="185" y="326" text-anchor="middle">췌장</text>
 
   <!-- 신장 (좌·우) -->
-  <g class="organ" data-part="kidneys" filter="url(#softShadow)">
+  <g class="organ" data-part="kidneys">
     <ellipse cx="142" cy="308" rx="15" ry="22" fill="{c('kidneys')}" stroke="{sc('kidneys')}" stroke-width="2"/>
     <ellipse cx="238" cy="308" rx="15" ry="22" fill="{c('kidneys')}" stroke="{sc('kidneys')}" stroke-width="2"/>
     <ellipse cx="142" cy="308" rx="15" ry="22" fill="url(#organShine)"/>
@@ -1200,7 +1196,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="238" y="312" text-anchor="middle">신장</text>
 
   <!-- 소장·대장 — 둥글게 감긴 모양 -->
-  <g class="organ" data-part="intestines" filter="url(#softShadow)">
+  <g class="organ" data-part="intestines">
     <path d="M140,334 Q122,344 124,366 Q126,386 148,394 Q172,400 196,394 Q218,386 220,366 Q222,344 204,334 Q186,326 190,350 Q190,368 170,370 Q150,368 152,350 Q152,336 140,334 Z"
           fill="{c('intestines')}" stroke="{sc('intestines')}" stroke-width="2.5"/>
     <path d="M140,334 Q122,344 124,366 Q126,386 148,394 Q172,400 196,394 Q218,386 220,366 Q222,344 204,334 Q186,326 190,350 Q190,368 170,370 Q150,368 152,350 Q152,336 140,334 Z"
@@ -1209,14 +1205,14 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="190" y="365" text-anchor="middle">소장·대장</text>
 
   <!-- 방광 -->
-  <g class="organ" data-part="bladder" filter="url(#softShadow)">
+  <g class="organ" data-part="bladder">
     <ellipse cx="190" cy="398" rx="24" ry="18" fill="{c('bladder')}" stroke="{sc('bladder')}" stroke-width="2"/>
     <ellipse cx="190" cy="398" rx="24" ry="18" fill="url(#organShine)"/>
   </g>
   <text class="organ-label" x="190" y="401" text-anchor="middle">방광</text>
 
   <!-- 무릎 관절 -->
-  <g class="organ" data-part="joints" filter="url(#softShadow)">
+  <g class="organ" data-part="joints">
     <circle cx="148" cy="508" r="18" fill="{c('joints')}" stroke="{sc('joints')}" stroke-width="2.5"/>
     <circle cx="232" cy="508" r="18" fill="{c('joints')}" stroke="{sc('joints')}" stroke-width="2.5"/>
     <circle cx="148" cy="508" r="18" fill="url(#organShine)"/>
@@ -1231,7 +1227,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="232" y="530" text-anchor="middle">무릎관절</text>
 
   <!-- 다리 하부 (정강이) -->
-  <g class="organ" data-part="legs" filter="url(#softShadow)">
+  <g class="organ" data-part="legs">
     <rect x="133" y="527" width="30" height="52" rx="15"
           fill="{c('legs')}" stroke="{sc('legs')}" stroke-width="2" opacity="0.85"/>
     <rect x="217" y="527" width="30" height="52" rx="15"
@@ -1239,7 +1235,7 @@ def render_body_svg(part_intensity, part_diseases):
   </g>
 
   <!-- 면역계 배지 (우측 상단) -->
-  <g class="organ" data-part="immune" filter="url(#softShadow)">
+  <g class="organ" data-part="immune">
     <rect x="298" y="155" width="54" height="28" rx="14"
           fill="{c('immune')}" stroke="{sc('immune')}" stroke-width="2"/>
     <rect x="298" y="155" width="54" height="28" rx="14" fill="url(#organShine)"/>
@@ -1247,7 +1243,7 @@ def render_body_svg(part_intensity, part_diseases):
   <text class="organ-label" x="325" y="173" text-anchor="middle">면역계</text>
 
   <!-- 피부 배지 (좌측 상단) -->
-  <g class="organ" data-part="skin" filter="url(#softShadow)">
+  <g class="organ" data-part="skin">
     <rect x="28" y="155" width="50" height="28" rx="14"
           fill="{c('skin')}" stroke="{sc('skin')}" stroke-width="2"/>
     <rect x="28" y="155" width="50" height="28" rx="14" fill="url(#organShine)"/>
